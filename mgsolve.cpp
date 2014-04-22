@@ -1,10 +1,4 @@
-
-
-
-
-
-
-// test
+//v1.0 Michi
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>

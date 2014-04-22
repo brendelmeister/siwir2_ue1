@@ -73,6 +73,8 @@ int main(int argc, char *argv[]) {
 		mgm( u, f,2,1,NX, NY);
 	}
 	save_in_file("test.txt", u, NX, NY);
+    delete[] u;
+    delete[] f;
 }
 
 void save_in_file(const char *str, double *matrix, const int n_x, const int n_y){
@@ -241,7 +243,7 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
 	double* f_co=new double[Ny_co*Nx_co]; // coarse f
 
 	restriction(f_co,res, n_x, n_y,0.125, 0.125 ,0.25 ,1.0/16.0); //full weighted restriction
-
+    delete[] res;
 	if(Nx_co==3||Ny_co==3){
 		u[0]=f[0]/GS_CENTER; // solve Au=b ??? ToDo: richtig????
 	}else{
@@ -251,8 +253,9 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
 		initCoarseBD(u, u_co , Nx_co);
 
 		mgm( u_co, f_co, v1, v2,Nx_co ,Ny_co); //recursive call
-
+        delete[] f_co;
 		prolongation(u_co,u,n_x,n_y); //prolongation
+        delete[] u_co;
 	}
 
 	do_gauss_seidel(u,f,n_x,n_y,v2); //post-smoothing*/

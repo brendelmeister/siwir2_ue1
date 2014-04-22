@@ -1,7 +1,7 @@
 CXX = g++
 CXXFLAGS ?= -ansi  -Winline -Wshadow -Wall -O3
-SOURCES = mgsolve.cpp tim.cpp lina.cpp michael.cpp
-OBJECTS = mgsolve.o tim.o 
+SOURCES = mgsolve.cpp
+OBJECTS = mgsolve.o 
 HEADERS = header.h
 LIBS = -lm
 

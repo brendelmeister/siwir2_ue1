@@ -44,6 +44,7 @@ void residuum(double* res,double* f, double* u, const int n_x,const int n_y);
 void restriction(double* f_co,double* res,const int n_x,const int n_y);
 void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y);
 void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y);
+void calcResiduum(double *res, double *f, double *u, int n_x, int n_y);
 
 int main(int argc, char *argv[]) {
 	if (argc != 3) {
@@ -64,6 +65,7 @@ int main(int argc, char *argv[]) {
 	for(int i=0;i<n;i++){ //multigrid steps
 		mgm( u, f,2,1,NX, NY);
 	}
+	save_in_file("test.txt", u, NX, NY);
 }
 
 void save_in_file(const char *str, double *matrix, const int n_x, const int n_y){
@@ -77,11 +79,11 @@ void save_in_file(const char *str, double *matrix, const int n_x, const int n_y)
 	//Sets the decimal precision to be used to format floating-point values on output operations.
 	//New value for the decimal precision:12
 	file << setprecision(12);
-	for(int yi = 0; yi < n_y + 1; ++yi){
-		for(int xj = 0; xj < n_x + 1; ++xj){
+	for(int yi = 0; yi < n_y ; ++yi){
+		for(int xj = 0; xj < n_x ; ++xj){
 			file << xj << '\t';
 			file << yi << '\t';
-			file << matrix[yi * (n_x+1) + xj] << '\n';
+			file << matrix[yi * (n_x) + xj] << '\n';
 		}
 		file << endl;
 	}
@@ -192,17 +194,6 @@ void initializeGrid(double* u){
 	}
 }
 
-//calculates residuum
-void residuum(double* res,double* f, double* u, const int n_x,const int n_y){
-	for(int j=0;j<n_y;j++){
-		for(int i=0;i<n_x;i++){
-			res[j*n_x+i] =f[j*n_x+i]- //f-Au
-				(GS_HORIZONTAL*(u[j*n_x+i-1]+ u[j*n_x+i+1])+
-				 GS_VERTICAL*(u[(j-1)*n_x+i]+ u[(j+1)*n_x+i])+
-				 GS_CENTER*u[j*n_x+i]);
-		}
-	}
-}
 
 //do restriction from residuum to f_coarse
 void restriction(double* f_co,double* res,const int n_x,const int n_y,
@@ -244,31 +235,55 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
 
 	restriction(f_co,res, n_x, n_y,0.125, 0.125 ,0.25 ,1.0/16.0); //full weighted restriction
 
-	if(Nx_co==3||Ny_co==3){
-		u[0]=f[0]/GS_CENTER; // solve Au=b ??? ToDo: richtig????
-	}else{
-		double* u_co = new double[Nx_co*Ny_co];
-		//for(int k=1;k<nyy;k++)// fuer nyy größer 1
-		memset(u_co,0,sizeof(double)*Ny_co*Nx_co);
-		initCoarseBD(u, u_co , Nx_co);
+	  if(Nx_co==3||Ny_co==3){
+	  u[0]=f[0]/GS_CENTER; // solve Au=b ??? ToDo: richtig????
+	  }else{
+	  double* u_co = new double[Nx_co*Ny_co];
+	//for(int k=1;k<nyy;k++)// fuer nyy größer 1
+	memset(u_co,0,sizeof(double)*Ny_co*Nx_co);
+	initCoarseBD(u, u_co , Nx_co);
 
-		mgm( u_co, f_co, v1, v2,Nx_co ,Ny_co); //recursive call
+	mgm( u_co, f_co, v1, v2,Nx_co ,Ny_co); //recursive call
 
-		prolongation(u_co,u,n_x,n_y); //prolongation
+	prolongation(u_co,u,n_x,n_y); //prolongation
 	}
 
-	do_gauss_seidel(u,f,n_x,n_y,v2); //post-smoothing
+	do_gauss_seidel(u,f,n_x,n_y,v2); //post-smoothing*/
 
 }
 
-void calcResiduum(double *res, double *u, double *f, int n_x, int n_y){
-	double h_local = 1.0/n_x;
-	for(int j= 0; j<n_y; j++){
-		for(int i =0 ; i<n_x; i++){
-			res[j*n_x+i] = f[j*n_x+i] - ((1.0/(h_local*h_local))*(-4.0*u[j*n_x+i]+u[(j+1)*n_x+i]+u[(j-1)*n_x+i]+u[j*n_x+i+1]+u[j*n_x+i-1]));
+//calculates residuum
+void residuum(double* res,double* f, double* u, const int n_x,const int n_y){
+	double hx_local = 1.0/n_x;	
+	double hy_local = 1.0/n_y;
+	double north, south, west, east = 0;
+	for(int j=0;j<n_y;j++){
+		for(int i=0;i<n_x;i++){
+			west = u[j*n_x+i-1];
+			east = u[j*n_x+i+1];	
+			north = u[(j+1)*n_x+i];		
+			south = u[(j-1)*n_x+i];
+			if(i == 0){
+				west = 0;				
+			}
+			if(j == 0){
+				south = 0;
+			}
+			if(i == n_x-1){
+				east = 0;
+			}
+			if(j == n_y-1){
+				south = 0;
+			}
+
+			res[j*n_x+i] =f[j*n_x+i]- //f-Au
+				(1/(hx_local*hy_local))*(GS_HORIZONTAL*(west+ east)+
+						GS_VERTICAL*(south+ north)+
+						GS_CENTER*u[j*n_x+i]);
 		}
 	}
 }
+
 
 double calcL2Norm(double *res, int n_x, int n_y){
 	double norm = 0;
@@ -281,11 +296,11 @@ double calcL2Norm(double *res, int n_x, int n_y){
 }
 
 
-/*void measureError(double *u, double *u_co, double gridsize){
-  double *error = new double[NX*NY];
-  for(int i = 0; i<NX; i++){
-  for(int j = 0; j < NY; j++){
-  error[i*NY+NX] = sqrt(u[i*NY+j]*u[i*NX+j]-u_co[i*NY+j]*u_co[i*NY+j]);
-  }
-  }
-  }*/
+void measureError(double *u, double gridsize){
+	double *error = new double[NX*NY];
+	for(int j = 0; j<NY; j++){
+		for(int i = 0; i < NX; i++){
+			error[j*NX+NY] = sqrt( sin(M_PI*j*h)*sinh(M_PI*i*h)* sin(M_PI*j*h)*sinh(M_PI*i*h)-u[j*NX+i]*u[j*NX+i]);
+		}
+	}
+}

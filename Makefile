@@ -1,23 +1,23 @@
 CXX ?= g++
-CXXFLAGS ?= -ansi -Wall -Winline -Wshadow -O3
+CXXFLAGS ?= -ansi  -Winline -Wshadow -O3
+SOURCES = tim.cpp lina.cpp michael.cpp
+OBJECTS = mgsolve.o tim.o lina.o michael.o
+HEADERS = header.h
 
-.PHONY: all clean 
 
-all: mgsolve
+.PHONY: all clean
+
+all: tim.o lina.o michael.o mgsolve.o mgsolve
+
+#generic compilation rule
+%.o : %.cpp
+	${CXX} ${CXXFLAGS} -c $<
+
+#how to link
+mgsolve: ${OBJECTS}
+	${CXX} -o $@ ${OBJECTS} ${LIBS}
+	rm -f ${OBJECTS}
+	
 clean:
-	rm -f  mgsolve.o mgsolve *.txt
-	rm -f test.o test
+	rm -f *.o *~
 
-
-mgsolve: mgsolve.o
-	$(CXX) $(CXXFLAGS) -o $@ $^ 
-
-mgsolve.o: mgsolve.cpp
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $<
-
-
-test: test.o
-	$(CXX) $(CXXFLAGS) -o $@ $^
-
-test.o: test.cpp
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $<

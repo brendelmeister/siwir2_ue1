@@ -78,14 +78,15 @@ void save_in_file(const char *str, double *matrix, const int n_x, const int n_y)
 		printf("%p konnte nicht gespeichert werden\n", str);
 		exit(1);
 	}
-
+	double hx_local = 1.0/(n_x-1);
+	double hy_local = 1.0/(n_y-1);
 	//Sets the decimal precision to be used to format floating-point values on output operations.
 	//New value for the decimal precision:12
 	file << setprecision(12);
 	for(int yi = 0; yi < n_y ; ++yi){
 		for(int xj = 0; xj < n_x ; ++xj){
-			file << xj << '\t';
-			file << yi << '\t';
+			file << xj*hx_local << '\t';
+			file << yi*hy_local << '\t';
 			file << matrix[yi * (n_x) + xj] << '\n';
 		}
 		file << endl;

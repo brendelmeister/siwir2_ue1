@@ -18,4 +18,4 @@ mgsolve: ${OBJECTS}
 	${CXX} -o $@ ${OBJECTS} ${LIBS}
 
 clean:
-	rm -f *.o *~ 
+	rm -f *.o *~ *.txt mgsolve 

@@ -1,13 +1,13 @@
 CXX = g++
-CXXFLAGS ?= -ansi  -Winline -Wshadow -O3
+CXXFLAGS ?= -ansi  -Winline -Wshadow -Wall -O3
 SOURCES = mgsolve.cpp tim.cpp lina.cpp michael.cpp
-OBJECTS = mgsolve.o tim.o lina.o michael.o
+OBJECTS = mgsolve.o tim.o 
 HEADERS = header.h
 LIBS = -lm
 
 .PHONY: all clean
 
-all: tim.o lina.o michael.o mgsolve.o mgsolve
+all:  mgsolve.o mgsolve
 
 # generic compilation rule
 %.o : %.cpp

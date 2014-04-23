@@ -17,17 +17,17 @@ int main(int argc, char *argv[]) {
 	l = atoi(argv[1]);
 	n = atoi(argv[2]);
 	NX = NY = getGridPointsDirichlet();
-	h = 1/(NX-1);
+    H = 1/(NX-1);
 
 
 	double* u = new double[NX*NY]; // initialise arrays
 	initializeGrid(u);
-	double* f = new double[NX*NY];
+    double* f = new double[NX*NY];
 	memset(f,0,sizeof(double)*NY*NX);
-
+/*
 	for(int i=0;i<n;i++){ //multigrid steps
 		mgm( u, f,2,1,NX, NY);
-	}
+    }*/
 	save_in_file("test.txt", u, NX, NY);
     delete[] u;
     delete[] f;
@@ -104,6 +104,7 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
 
 	/*do a gauss seidel iteration for c times
 	 */
+    double h = 1/n_x;
 	for(int it = 0; it < c; it++ ){
 
 		// /*gauss seidel "normal"
@@ -123,22 +124,22 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
 		//#pragma omp parallel for num_threads(32) schedule(static) firstprivate(u) if(n_x > 400 && n_y > 400)
 		for(int yi = 1; yi < n_y ; yi++){
 			for(int xj = 1 + (yi % 2); xj < n_x; xj += 2){
-				u[yi * (n_x + 1) + xj] = ( f[yi * (n_x + 1) + xj]	+ GS_HORIZONTAL * u[yi * (n_x + 1) + xj +1]
-						+ GS_HORIZONTAL * u[yi * (n_x + 1) + xj -1]
-						+ GS_VERTICAL * u[(yi + 1) * (n_x + 1) + xj]
-						+ GS_VERTICAL * u[(yi - 1) * (n_x + 1) + xj]
-						) * GS_CENTER;
+                u[yi * (n_x + 1) + xj] = ( f[yi * (n_x + 1) + xj]	+ GS_HORIZONTAL/(h*h) * u[yi * (n_x + 1) + xj +1]
+                        + GS_HORIZONTAL/(h*h) * u[yi * (n_x + 1) + xj -1]
+                        + GS_VERTICAL/(h*h) * u[(yi + 1) * (n_x + 1) + xj]
+                        + GS_VERTICAL/(h*h) * u[(yi - 1) * (n_x + 1) + xj]
+                        ) * (h*h)/GS_CENTER;
 			}
 		}
 		/*-------black-------*/
 		//#pragma omp parallel for num_threads(32) schedule(static) firstprivate(u) if(n_x > 400 && n_y > 400)
 		for(int yi = 1; yi < n_y; yi++) {
 			for(int xj = 2 - (yi % 2); xj < n_x; xj += 2) {
-				u[yi * (n_x + 1) + xj] = ( f[yi * (n_x + 1) + xj] + GS_HORIZONTAL * u[yi * (n_x + 1) + xj +1]
-						+ GS_HORIZONTAL * u[yi * (n_x + 1) + xj -1]
-						+ GS_VERTICAL * u[(yi + 1) * (n_x + 1) + xj]
-						+ GS_VERTICAL * u[(yi - 1) * (n_x + 1) + xj]
-						) * GS_CENTER;
+                u[yi * (n_x + 1) + xj] = ( f[yi * (n_x + 1) + xj] + GS_HORIZONTAL/(h*h) * u[yi * (n_x + 1) + xj +1]
+                        + GS_HORIZONTAL/(h*h) * u[yi * (n_x + 1) + xj -1]
+                        + GS_VERTICAL/(h*h) * u[(yi + 1) * (n_x + 1) + xj]
+                        + GS_VERTICAL/(h*h) * u[(yi - 1) * (n_x + 1) + xj]
+                        ) * (h*h)/GS_CENTER;
 			}
 		}
 	}
@@ -150,14 +151,14 @@ int getGridPointsDirichlet(){
 }
 
 void initializeGrid(double* u){
-	for(int j=0 ;j<NY;++j){
+    for(int j=0 ;j<NY;++j){
 		for (int i = 0; i < NX; ++i) {
 			if(i == NX-1) // as sin = 0 for i==0 or j == 0
 			{
 				u[j*NX+i] = sin(M_PI*j*h)*sinh(M_PI*i*h);
 			}
 		}
-	}
+    }
 }
 
 
@@ -267,7 +268,7 @@ void measureError(double *u, double gridsize){
 	double *error = new double[NX*NY];
 	for(int j = 0; j<NY; j++){
 		for(int i = 0; i < NX; i++){
-			error[j*NX+NY] = sqrt( sin(M_PI*j*h)*sinh(M_PI*i*h)* sin(M_PI*j*h)*sinh(M_PI*i*h)-u[j*NX+i]*u[j*NX+i]);
+            error[j*NX+NY] = sqrt( sin(M_PI*j*H)*sinh(M_PI*i*H)* sin(M_PI*j*H)*sinh(M_PI*i*H)-u[j*NX+i]*u[j*NX+i]);
 		}
 	}
 }

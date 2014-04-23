@@ -13,9 +13,9 @@
 #define _USE_MATH_DEFINES
 
 //Gauss-Seidel-Stencil
-const double GS_HORIZONTAL=1;
-const double GS_VERTICAL=1;
-const double GS_CENTER=-4;
+const double GS_HORIZONTAL=-1;
+const double GS_VERTICAL=-1;
+const double GS_CENTER=4;
 //restriction Stencil
 const double RES_HORIZONTAL=0.125;
 const double RES_VERTICAL=0.125;
@@ -26,7 +26,7 @@ const double RES_CORNER=0.0625;
 
 static int l; // number of levels
 static int n; // number of V-cycles
-static double h; // meshsize
+static double H; // meshsize
 static int NX; // grid points in x-direction
 static int NY; // grid points in y-direction
 

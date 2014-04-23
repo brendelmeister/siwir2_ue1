@@ -1,71 +1,40 @@
-#include <iostream>
-#include <fstream>
-#include <stdlib.h>
-#include <iomanip>
-#define _USE_MATH_DEFINES
-#include <math.h>
-#include <omp.h>
-#include <time.h>
-#include <sys/time.h>
-#include <stdio.h>
-#include <cstring>
+/****************************************************************************
+*                   FAU Erlangen SS14
+*                   Siwir2 Uebung 1 - Elliptic PDE with Multigrid
+*                   written by Lina Gundelwein, Michael Hildebrand, Tim Brendel
+*                   April 2014
+*****************************************************************************/
 
-
+#include "header.h"
 using namespace std;
-#define PI M_PI
 
-//Gauss-Seidel-Stencil
-const double GS_HORIZONTAL=1;
-const double GS_VERTICAL=1;
-const double GS_CENTER=-4;
-//restriction Stencil
-const double RES_HORIZONTAL=0.125;
-const double RES_VERTICAL=0.125;
-const double RES_CENTER=0.25;
-const double RES_CORNER=0.0625;
-
-
-
-static int l; // number of levels
-static int n; // number of V-cycles
-static double h; // meshsize
-static int NX; // grid points in x-direction
-static int NY; // grid points in y-direction
-
-
-int getGridPointsDirichlet();
-void initializeGrid(double* u);
-void initialize_u_with_boundary_conditions(double *u, const int n_x, const int n_y, const double h_x, const double h_y);
-void initCoarseBD(const double* u_fi, double* u_co, int Nx_co);
-void save_in_file(const char *str, double *matrix, const int n_x, const int n_y);
-
-void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const int c);
-void residuum(double* res,double* f, double* u, const int n_x,const int n_y);
-void restriction(double* f_co,double* res,const int n_x,const int n_y);
-void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y);
-void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y);
-void calcResiduum(double *res, double *f, double *u, int n_x, int n_y);
 
 int main(int argc, char *argv[]) {
 	if (argc != 3) {
 		cout<<"Wrong number of arguments!"<<endl;
+		cout<<"call ./mgsolve l n "<<endl;
+		cout<<"l: number of levels; n: numer of V-cycles"<<endl;
 		exit(EXIT_FAILURE);
 	}
 	l = atoi(argv[1]);
 	n = atoi(argv[2]);
 	NX = NY = getGridPointsDirichlet();
-	h = 1/(NX-1);
+	H = 1.0/(NX-1);
 
 
 	double* u = new double[NX*NY]; // initialise arrays
 	initializeGrid(u);
 	double* f = new double[NX*NY];
 	memset(f,0,sizeof(double)*NY*NX);
-
-	for(int i=0;i<n;i++){ //multigrid steps
-		mgm( u, f,2,1,NX, NY);
-	}
-	save_in_file("test.txt", u, NX, NY);
+	do_gauss_seidel(u,f,NX,NY,25);
+	
+	
+// 	for(int i=0;i<n;i++){ //multigrid steps
+// 		mgm( u, f,2,1,NX, NY);
+// 	}
+	save_in_file("boundaries.txt", u, NX, NY);
+    delete[] u;
+    delete[] f;
 }
 
 void save_in_file(const char *str, double *matrix, const int n_x, const int n_y){
@@ -137,45 +106,75 @@ void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y){
 
 void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const int c){
 
-	/*do a gauss seidel iteration for c times
-	 */
-	for(int it = 0; it < c; it++ ){
+	if(n_x != n_y){
+		cout<<"error: grid not quadratic"<<endl;
+		exit(EXIT_FAILURE);
+	}
+	double h = 1.0 / n_x;
+/*
 
-		// /*gauss seidel "normal"
-		// */
-		// for(int yi = 1; yi < n_y; ++yi){
-		// for(int xj = 1; xj < n_x; ++xj){
-		// u[yi * (n_x + 1) + xj] = ( f[yi * (n_x + 1) + xj] + horizontal * u[yi * (n_x + 1) + xj +1]
-		// + horizontal * u[yi * (n_x + 1) + xj -1]
-		// + vertical * u[(yi + 1) * (n_x + 1) + xj]
-		// + vertical * u[(yi - 1) * (n_x + 1) + xj]
-		// ) * center;
-		// }
-		// }
-		/*red-black gauss seidel
-		 */
-		/*------red------*/
-		//#pragma omp parallel for num_threads(32) schedule(static) firstprivate(u) if(n_x > 400 && n_y > 400)
-		for(int yi = 1; yi < n_y ; yi++){
-			for(int xj = 1 + (yi % 2); xj < n_x; xj += 2){
-				u[yi * (n_x + 1) + xj] = ( f[yi * (n_x + 1) + xj]	+ GS_HORIZONTAL * u[yi * (n_x + 1) + xj +1]
-						+ GS_HORIZONTAL * u[yi * (n_x + 1) + xj -1]
-						+ GS_VERTICAL * u[(yi + 1) * (n_x + 1) + xj]
-						+ GS_VERTICAL * u[(yi - 1) * (n_x + 1) + xj]
-						) * GS_CENTER;
-			}
-		}
-		/*-------black-------*/
-		//#pragma omp parallel for num_threads(32) schedule(static) firstprivate(u) if(n_x > 400 && n_y > 400)
-		for(int yi = 1; yi < n_y; yi++) {
-			for(int xj = 2 - (yi % 2); xj < n_x; xj += 2) {
-				u[yi * (n_x + 1) + xj] = ( f[yi * (n_x + 1) + xj] + GS_HORIZONTAL * u[yi * (n_x + 1) + xj +1]
-						+ GS_HORIZONTAL * u[yi * (n_x + 1) + xj -1]
-						+ GS_VERTICAL * u[(yi + 1) * (n_x + 1) + xj]
-						+ GS_VERTICAL * u[(yi - 1) * (n_x + 1) + xj]
-						) * GS_CENTER;
-			}
-		}
+	//do a gauss seidel iteration for c times
+	for(int it = 0; it < c; ++it ){
+
+	 // gauss seidel "normal" 
+	 for(int yi = 1; yi < n_y; ++yi){
+	  for(int xj = 1; xj < n_x; ++xj){
+	   u[yi * n_x + xj] = ( f[yi * n_x + xj]
+	     + GS_HORIZONTAL * u[yi * n_x + xj +1]
+	     + GS_HORIZONTAL * u[yi * n_x + xj -1]
+	     + GS_VERTICAL * u[(yi + 1) * n_x + xj]
+	     + GS_VERTICAL * u[(yi - 1) * n_x + xj]
+	     ) * GS_CENTER / (h*h);
+	  }
+	 }
+	 // 		//red-black gauss seidel 
+	 // 		//------red------
+	 // 		//#pragma omp parallel for num_threads(32) schedule(static) firstprivate(u) if(n_x > 400 && n_y > 400)
+	 // 		for(int yi = 1; yi < n_y ; yi++){
+	 // 			for(int xj = 1 + (yi % 2); xj < n_x; xj += 2){
+	 // 				u[yi * n_x + xj] = ( f[yi * n_x + xj]	+ GS_HORIZONTAL * u[yi * n_x + xj +1]
+	 // 																		+ GS_HORIZONTAL * u[yi * n_x + xj -1]
+	 // 																		+ GS_VERTICAL * u[(yi + 1) * n_x + xj]
+	 // 																		+ GS_VERTICAL * u[(yi - 1) * n_x + xj]
+	 // 											) * GS_CENTER / (h*h);
+	 // 			}
+	 // 		}
+	 // 		//-------black-------
+	 // 		//#pragma omp parallel for num_threads(32) schedule(static) firstprivate(u) if(n_x > 400 && n_y > 400)
+	 // 		for(int yi = 1; yi < n_y; yi++) {
+	 // 			for(int xj = 2 - (yi % 2); xj < n_x; xj += 2) {
+	 // 				u[yi * (n_x + 1) + xj] = ( f[yi * n_x + xj] 	+ GS_HORIZONTAL * u[yi * n_x + xj +1]
+	 // 																				+ GS_HORIZONTAL * u[yi * n_x + xj -1]
+	 // 																				+ GS_VERTICAL * u[(yi + 1) * n_x + xj]
+	 // 																				+ GS_VERTICAL * u[(yi - 1) * n_x + xj]
+	 // 													) * GS_CENTER / (h*h);
+	 // 			}
+	 // 		}
+	}
+	*/
+
+	//#pragma omp parallel
+	for (int iter=0;iter<c;iter++)
+	{
+	 //red
+//#pragma omp for schedule(static)
+	 for (int y=1;y<n_y-1;y++)
+	 {
+	  for (int x=(y%2)+1;x<n_x-1;x+=2)
+	  {
+	   u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
+	  }
+	 }
+	 //black
+//#pragma omp for schedule(static)
+	 for (int y=1;y<n_y-1;y++)
+	 {
+	  for (int x=((y+1)%2)+1;x<n_x-1;x+=2)
+	  {
+	   u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
+	  }
+	 }
+
 	}
 }
 
@@ -185,13 +184,16 @@ int getGridPointsDirichlet(){
 }
 
 void initializeGrid(double* u){
-	for(int j=0 ;j<NY;++j){
-		for (int i = 0; i < NX; ++i) {
-			if(i == NX-1) // as sin = 0 for i==0 or j == 0
-			{
-				u[j*NX+i] = sin(M_PI*j*h)*sinh(M_PI*i*h);
-			}
-		}
+// 	for(int j=0 ;j<NY;++j){
+// 		for (int i = 0; i < NX; ++i) {
+// 			if(i == NX-1) // as sin = 0 for i==0 or j == 0
+// 			{
+// 				u[j*NX+i] = sin(M_PI*j*h)*sinh(M_PI*i*h);
+// 			}
+// 		}
+// 	}
+	for(int i = 0; i < NX; ++i){
+		u[(NY-1) * NX + i] = sin(M_PI*i*H) * sinh(M_PI*(NY-1)*H);
 	}
 }
 
@@ -235,7 +237,7 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
 	double* f_co=new double[Ny_co*Nx_co]; // coarse f
 
 	restriction(f_co,res, n_x, n_y,0.125, 0.125 ,0.25 ,1.0/16.0); //full weighted restriction
-
+    delete[] res;
 	if(Nx_co==3||Ny_co==3){
 		u[0]=f[0]/GS_CENTER; // solve Au=b ??? ToDo: richtig????
 	}else{
@@ -245,8 +247,9 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
 		initCoarseBD(u, u_co , Nx_co);
 
 		mgm( u_co, f_co, v1, v2,Nx_co ,Ny_co); //recursive call
-
+        delete[] f_co;
 		prolongation(u_co,u,n_x,n_y); //prolongation
+        delete[] u_co;
 	}
 
 	do_gauss_seidel(u,f,n_x,n_y,v2); //post-smoothing*/
@@ -301,7 +304,7 @@ void measureError(double *u, double gridsize){
 	double *error = new double[NX*NY];
 	for(int j = 0; j<NY; j++){
 		for(int i = 0; i < NX; i++){
-			error[j*NX+NY] = sqrt( sin(M_PI*j*h)*sinh(M_PI*i*h)* sin(M_PI*j*h)*sinh(M_PI*i*h)-u[j*NX+i]*u[j*NX+i]);
+			error[j*NX+NY] = sqrt( sin(M_PI*j*H)*sinh(M_PI*i*H)* sin(M_PI*j*H)*sinh(M_PI*i*H)-u[j*NX+i]*u[j*NX+i]);
 		}
 	}
 }

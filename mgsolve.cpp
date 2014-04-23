@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 	initializeGrid(u);
 	double* f = new double[NX*NY];
 	memset(f,0,sizeof(double)*NY*NX);
-do_gauss_seidel(u,f,NX,NY,25);
+	do_gauss_seidel(u,f,NX,NY,25);
 	
 	
 // 	for(int i=0;i<n;i++){ //multigrid steps
@@ -111,44 +111,70 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
 		exit(EXIT_FAILURE);
 	}
 	double h = 1.0 / n_x;
+/*
 
-	/*do a gauss seidel iteration for c times
-	 */
+	//do a gauss seidel iteration for c times
 	for(int it = 0; it < c; ++it ){
 
-		// /*gauss seidel "normal" */
-		for(int yi = 1; yi < n_y; ++yi){
-			for(int xj = 1; xj < n_x; ++xj){
-				u[yi * n_x + xj] = ( f[yi * n_x + xj] 	+ GS_HORIZONTAL * u[yi * n_x + xj +1]
-																		+ GS_HORIZONTAL * u[yi * n_x + xj -1]
-																		+ GS_VERTICAL * u[(yi + 1) * n_x + xj]
-																		+ GS_VERTICAL * u[(yi - 1) * n_x + xj]
-											) * GS_CENTER / (h*h);
-			}
-		}
-// 		/*red-black gauss seidel */
-// 		/*------red------*/
-// 		//#pragma omp parallel for num_threads(32) schedule(static) firstprivate(u) if(n_x > 400 && n_y > 400)
-// 		for(int yi = 1; yi < n_y ; yi++){
-// 			for(int xj = 1 + (yi % 2); xj < n_x; xj += 2){
-// 				u[yi * n_x + xj] = ( f[yi * n_x + xj]	+ GS_HORIZONTAL * u[yi * n_x + xj +1]
-// 																		+ GS_HORIZONTAL * u[yi * n_x + xj -1]
-// 																		+ GS_VERTICAL * u[(yi + 1) * n_x + xj]
-// 																		+ GS_VERTICAL * u[(yi - 1) * n_x + xj]
-// 											) * GS_CENTER / (h*h);
-// 			}
-// 		}
-// 		/*-------black-------*/
-// 		//#pragma omp parallel for num_threads(32) schedule(static) firstprivate(u) if(n_x > 400 && n_y > 400)
-// 		for(int yi = 1; yi < n_y; yi++) {
-// 			for(int xj = 2 - (yi % 2); xj < n_x; xj += 2) {
-// 				u[yi * (n_x + 1) + xj] = ( f[yi * n_x + xj] 	+ GS_HORIZONTAL * u[yi * n_x + xj +1]
-// 																				+ GS_HORIZONTAL * u[yi * n_x + xj -1]
-// 																				+ GS_VERTICAL * u[(yi + 1) * n_x + xj]
-// 																				+ GS_VERTICAL * u[(yi - 1) * n_x + xj]
-// 													) * GS_CENTER / (h*h);
-// 			}
-// 		}
+	 // gauss seidel "normal" 
+	 for(int yi = 1; yi < n_y; ++yi){
+	  for(int xj = 1; xj < n_x; ++xj){
+	   u[yi * n_x + xj] = ( f[yi * n_x + xj]
+	     + GS_HORIZONTAL * u[yi * n_x + xj +1]
+	     + GS_HORIZONTAL * u[yi * n_x + xj -1]
+	     + GS_VERTICAL * u[(yi + 1) * n_x + xj]
+	     + GS_VERTICAL * u[(yi - 1) * n_x + xj]
+	     ) * GS_CENTER / (h*h);
+	  }
+	 }
+	 // 		//red-black gauss seidel 
+	 // 		//------red------
+	 // 		//#pragma omp parallel for num_threads(32) schedule(static) firstprivate(u) if(n_x > 400 && n_y > 400)
+	 // 		for(int yi = 1; yi < n_y ; yi++){
+	 // 			for(int xj = 1 + (yi % 2); xj < n_x; xj += 2){
+	 // 				u[yi * n_x + xj] = ( f[yi * n_x + xj]	+ GS_HORIZONTAL * u[yi * n_x + xj +1]
+	 // 																		+ GS_HORIZONTAL * u[yi * n_x + xj -1]
+	 // 																		+ GS_VERTICAL * u[(yi + 1) * n_x + xj]
+	 // 																		+ GS_VERTICAL * u[(yi - 1) * n_x + xj]
+	 // 											) * GS_CENTER / (h*h);
+	 // 			}
+	 // 		}
+	 // 		//-------black-------
+	 // 		//#pragma omp parallel for num_threads(32) schedule(static) firstprivate(u) if(n_x > 400 && n_y > 400)
+	 // 		for(int yi = 1; yi < n_y; yi++) {
+	 // 			for(int xj = 2 - (yi % 2); xj < n_x; xj += 2) {
+	 // 				u[yi * (n_x + 1) + xj] = ( f[yi * n_x + xj] 	+ GS_HORIZONTAL * u[yi * n_x + xj +1]
+	 // 																				+ GS_HORIZONTAL * u[yi * n_x + xj -1]
+	 // 																				+ GS_VERTICAL * u[(yi + 1) * n_x + xj]
+	 // 																				+ GS_VERTICAL * u[(yi - 1) * n_x + xj]
+	 // 													) * GS_CENTER / (h*h);
+	 // 			}
+	 // 		}
+	}
+	*/
+
+	//#pragma omp parallel
+	for (int iter=0;iter<c;iter++)
+	{
+	 //red
+//#pragma omp for schedule(static)
+	 for (int y=1;y<n_y-1;y++)
+	 {
+	  for (int x=(y%2)+1;x<n_x-1;x+=2)
+	  {
+	   u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
+	  }
+	 }
+	 //black
+//#pragma omp for schedule(static)
+	 for (int y=1;y<n_y-1;y++)
+	 {
+	  for (int x=((y+1)%2)+1;x<n_x-1;x+=2)
+	  {
+	   u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
+	  }
+	 }
+
 	}
 }
 

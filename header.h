@@ -23,6 +23,8 @@ const double RES_CENTER=0.25;
 const double RES_CORNER=0.0625;
 
 
+#define LEADING_DIM n_x
+#define IDX(i,j) ((j)*(LEADING_DIM)+(i))
 
 static int l; // number of levels
 static int n; // number of V-cycles

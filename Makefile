@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS ?= -ansi  -Winline -Wshadow -Wall -O3
+CXXFLAGS ?= -ansi  -Winline -Wshadow -Wall -O3 
 SOURCES = mgsolve.cpp
 OBJECTS = mgsolve.o 
 HEADERS = header.h

@@ -12,23 +12,27 @@ using namespace std;
 int main(int argc, char *argv[]) {
 	if (argc != 3) {
 		cout<<"Wrong number of arguments!"<<endl;
+		cout<<"call ./mgsolve l n "<<endl;
+		cout<<"l: number of levels; n: numer of V-cycles"<<endl;
 		exit(EXIT_FAILURE);
 	}
 	l = atoi(argv[1]);
 	n = atoi(argv[2]);
 	NX = NY = getGridPointsDirichlet();
-	h = 1/(NX-1);
+	H = 1.0/(NX-1);
 
 
 	double* u = new double[NX*NY]; // initialise arrays
 	initializeGrid(u);
 	double* f = new double[NX*NY];
 	memset(f,0,sizeof(double)*NY*NX);
-
-	for(int i=0;i<n;i++){ //multigrid steps
-		mgm( u, f,2,1,NX, NY);
-	}
-	save_in_file("test.txt", u, NX, NY);
+do_gauss_seidel(u,f,NX,NY,25);
+	
+	
+// 	for(int i=0;i<n;i++){ //multigrid steps
+// 		mgm( u, f,2,1,NX, NY);
+// 	}
+	save_in_file("boundaries.txt", u, NX, NY);
     delete[] u;
     delete[] f;
 }
@@ -102,45 +106,49 @@ void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y){
 
 void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const int c){
 
+	if(n_x != n_y){
+		cout<<"error: grid not quadratic"<<endl;
+		exit(EXIT_FAILURE);
+	}
+	double h = 1.0 / n_x;
+
 	/*do a gauss seidel iteration for c times
 	 */
-	for(int it = 0; it < c; it++ ){
+	for(int it = 0; it < c; ++it ){
 
-		// /*gauss seidel "normal"
-		// */
-		// for(int yi = 1; yi < n_y; ++yi){
-		// for(int xj = 1; xj < n_x; ++xj){
-		// u[yi * (n_x + 1) + xj] = ( f[yi * (n_x + 1) + xj] + horizontal * u[yi * (n_x + 1) + xj +1]
-		// + horizontal * u[yi * (n_x + 1) + xj -1]
-		// + vertical * u[(yi + 1) * (n_x + 1) + xj]
-		// + vertical * u[(yi - 1) * (n_x + 1) + xj]
-		// ) * center;
-		// }
-		// }
-		/*red-black gauss seidel
-		 */
-		/*------red------*/
-		//#pragma omp parallel for num_threads(32) schedule(static) firstprivate(u) if(n_x > 400 && n_y > 400)
-		for(int yi = 1; yi < n_y ; yi++){
-			for(int xj = 1 + (yi % 2); xj < n_x; xj += 2){
-				u[yi * (n_x + 1) + xj] = ( f[yi * (n_x + 1) + xj]	+ GS_HORIZONTAL * u[yi * (n_x + 1) + xj +1]
-						+ GS_HORIZONTAL * u[yi * (n_x + 1) + xj -1]
-						+ GS_VERTICAL * u[(yi + 1) * (n_x + 1) + xj]
-						+ GS_VERTICAL * u[(yi - 1) * (n_x + 1) + xj]
-						) * GS_CENTER;
+		// /*gauss seidel "normal" */
+		for(int yi = 1; yi < n_y; ++yi){
+			for(int xj = 1; xj < n_x; ++xj){
+				u[yi * n_x + xj] = ( f[yi * n_x + xj] 	+ GS_HORIZONTAL * u[yi * n_x + xj +1]
+																		+ GS_HORIZONTAL * u[yi * n_x + xj -1]
+																		+ GS_VERTICAL * u[(yi + 1) * n_x + xj]
+																		+ GS_VERTICAL * u[(yi - 1) * n_x + xj]
+											) * GS_CENTER / (h*h);
 			}
 		}
-		/*-------black-------*/
-		//#pragma omp parallel for num_threads(32) schedule(static) firstprivate(u) if(n_x > 400 && n_y > 400)
-		for(int yi = 1; yi < n_y; yi++) {
-			for(int xj = 2 - (yi % 2); xj < n_x; xj += 2) {
-				u[yi * (n_x + 1) + xj] = ( f[yi * (n_x + 1) + xj] + GS_HORIZONTAL * u[yi * (n_x + 1) + xj +1]
-						+ GS_HORIZONTAL * u[yi * (n_x + 1) + xj -1]
-						+ GS_VERTICAL * u[(yi + 1) * (n_x + 1) + xj]
-						+ GS_VERTICAL * u[(yi - 1) * (n_x + 1) + xj]
-						) * GS_CENTER;
-			}
-		}
+// 		/*red-black gauss seidel */
+// 		/*------red------*/
+// 		//#pragma omp parallel for num_threads(32) schedule(static) firstprivate(u) if(n_x > 400 && n_y > 400)
+// 		for(int yi = 1; yi < n_y ; yi++){
+// 			for(int xj = 1 + (yi % 2); xj < n_x; xj += 2){
+// 				u[yi * n_x + xj] = ( f[yi * n_x + xj]	+ GS_HORIZONTAL * u[yi * n_x + xj +1]
+// 																		+ GS_HORIZONTAL * u[yi * n_x + xj -1]
+// 																		+ GS_VERTICAL * u[(yi + 1) * n_x + xj]
+// 																		+ GS_VERTICAL * u[(yi - 1) * n_x + xj]
+// 											) * GS_CENTER / (h*h);
+// 			}
+// 		}
+// 		/*-------black-------*/
+// 		//#pragma omp parallel for num_threads(32) schedule(static) firstprivate(u) if(n_x > 400 && n_y > 400)
+// 		for(int yi = 1; yi < n_y; yi++) {
+// 			for(int xj = 2 - (yi % 2); xj < n_x; xj += 2) {
+// 				u[yi * (n_x + 1) + xj] = ( f[yi * n_x + xj] 	+ GS_HORIZONTAL * u[yi * n_x + xj +1]
+// 																				+ GS_HORIZONTAL * u[yi * n_x + xj -1]
+// 																				+ GS_VERTICAL * u[(yi + 1) * n_x + xj]
+// 																				+ GS_VERTICAL * u[(yi - 1) * n_x + xj]
+// 													) * GS_CENTER / (h*h);
+// 			}
+// 		}
 	}
 }
 
@@ -150,13 +158,16 @@ int getGridPointsDirichlet(){
 }
 
 void initializeGrid(double* u){
-	for(int j=0 ;j<NY;++j){
-		for (int i = 0; i < NX; ++i) {
-			if(i == NX-1) // as sin = 0 for i==0 or j == 0
-			{
-				u[j*NX+i] = sin(M_PI*j*h)*sinh(M_PI*i*h);
-			}
-		}
+// 	for(int j=0 ;j<NY;++j){
+// 		for (int i = 0; i < NX; ++i) {
+// 			if(i == NX-1) // as sin = 0 for i==0 or j == 0
+// 			{
+// 				u[j*NX+i] = sin(M_PI*j*h)*sinh(M_PI*i*h);
+// 			}
+// 		}
+// 	}
+	for(int i = 0; i < NX; ++i){
+		u[(NY-1) * NX + i] = sin(M_PI*i*H) * sinh(M_PI*(NY-1)*H);
 	}
 }
 
@@ -267,7 +278,7 @@ void measureError(double *u, double gridsize){
 	double *error = new double[NX*NY];
 	for(int j = 0; j<NY; j++){
 		for(int i = 0; i < NX; i++){
-			error[j*NX+NY] = sqrt( sin(M_PI*j*h)*sinh(M_PI*i*h)* sin(M_PI*j*h)*sinh(M_PI*i*h)-u[j*NX+i]*u[j*NX+i]);
+			error[j*NX+NY] = sqrt( sin(M_PI*j*H)*sinh(M_PI*i*H)* sin(M_PI*j*H)*sinh(M_PI*i*H)-u[j*NX+i]*u[j*NX+i]);
 		}
 	}
 }

@@ -26,7 +26,7 @@ const double RES_CORNER=0.0625;
 
 static int l; // number of levels
 static int n; // number of V-cycles
-static double h; // meshsize
+static double H; // meshsize
 static int NX; // grid points in x-direction
 static int NY; // grid points in y-direction
 

@@ -27,10 +27,21 @@ int main(int argc, char *argv[]) {
 	initializeGrid(u);
 	double* f = new double[NX*NY];
 	memset(f,0,sizeof(double)*NY*NX);
+	
+	do_gauss_seidel(u,f, NX, NY, 100);
+	double* res = new double[NY*NX];
+	memset(res,0,sizeof(double)*NY*NX);
+	residuum(res,f, u, NX,NY);
+	double l2norm = calcL2Norm(res, NX, NY);
+	cout<<l2norm<<endl;
+	save_in_file("residuum_gs100_neue_l2.txt", res, NX, NY);
+	calculate_L2Norm(res, u, f, NX, NY);
+	save_in_file("residuum_gs100_alte_l2.txt", res, NX, NY);
+	delete[] res;
 
-	for(int i=0;i<n;i++){ //multigrid steps
-		mgm( u, f,2,1,NX, NY);
-	}
+// 	for(int i=0;i<n;i++){ //multigrid steps
+// 		mgm( u, f,2,1,NX, NY);
+// 	}
 	save_in_file("boundaries.txt", u, NX, NY);
 	delete[] u;
 	delete[] f;
@@ -166,10 +177,21 @@ void initializeGrid(double* u){
 
 
 //do restriction from residuum to f_coarse
-void restriction(double* f_co,double* res,const int n_x,const int n_y,
-		const double horizontal, const double vertical, const double center, const double corner){
+void restriction(double* f_co,double* res,const int n_x,const int n_y){
 	int Nx_co=(n_x/2)+1;
 	int Ny_co=(n_y/2)+1;
+	
+	//x=0(linker rand) und x=1(rechter rand)
+	for(int j=0; j<Ny_co;j++){
+		f_co[j*Nx_co+0] = res[j*2*n_x+0];
+		f_co[j*Nx_co+Nx_co] = res[j*2*n_x+n_x];
+	}
+	//y=0(unterer rand) und y=1(oberer rand)
+	for(int i=0; i<Nx_co;i++){
+		f_co[0*Nx_co+i] = res[0*2*n_x+i*2];
+		f_co[Ny_co*Nx_co+i] = res[Ny_co*2*n_x+i*2];
+	}
+
 	for(int j=0;j<Ny_co;j++){
 		for(int i=0;i<Nx_co;i++){
 			f_co[j*Ny_co+i] =RES_CENTER*res[j*2*n_x+i*2]+ //restriction stencil
@@ -203,7 +225,7 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
 	int Ny_co=(n_y/2)+1;
 	double* f_co=new double[Ny_co*Nx_co]; // coarse f
 
-	restriction(f_co,res, n_x, n_y,0.125, 0.125 ,0.25 ,1.0/16.0); //full weighted restriction
+	restriction(f_co,res, n_x, n_y); //full weighted restriction
 	delete[] res;
 	if(Nx_co==3||Ny_co==3)
 	{
@@ -230,14 +252,14 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
 void residuum(double* res,double* f, double* u, const int n_x,const int n_y){
 	double hx_local = 1.0/n_x;	
 	double hy_local = 1.0/n_y;
-	double north, south, west, east = 0;
+// 	double north, south, west, east = 0;
 	for(int j=1;j<n_y-1;j++){
 		for(int i=1;i<n_x-1;i++){
-			west = u[j*n_x+i-1];
+/*			west = u[j*n_x+i-1];
 			east = u[j*n_x+i+1];	
 			north = u[(j+1)*n_x+i];	
 			south = u[(j-1)*n_x+i];
-			/*
+			
 			if(i == 0){
 				west = 0;	
 			}
@@ -250,12 +272,14 @@ void residuum(double* res,double* f, double* u, const int n_x,const int n_y){
 			if(j == n_y-1){
 				south = 0;
 			}
-			*/
+*/			
 
 			res[IDX(i,j)] =f[IDX(i,j)]- //f-Au
-				(1./(hx_local*hy_local))*(GS_HORIZONTAL*(west+ east)+
-						GS_VERTICAL*(south+ north)+
-						GS_CENTER*u[j*n_x+i]);
+				(1.0/(hx_local*hy_local))*(u[j*n_x+i-1]
+													+ u[j*n_x+i+1]
+													+ u[(j-1)*n_x+i]
+													+ u[(j+1)*n_x+i]
+													- 4.0* u[j*n_x+i]);
 		}
 	}
 }
@@ -280,3 +304,23 @@ void measureError(double *u, double gridsize){
 		}
 	}
 }
+
+void calculate_L2Norm(double *res, const double *u, const double *f, const int n_x, const int n_y){
+
+	double L2norm = 0.0;
+	double sum_res = 0.0;
+	//    #pragma omp parallel for num_threads(32) if(n_x > 2500 && n_y > 2500)
+	for(int yi = 1; yi < n_y-1; ++yi){
+		for(int xj = 1; xj < n_x-1; ++xj){
+			res[yi * n_x + xj] = ( f[yi * n_x + xj]		- (1.0/(H*H)) * u[yi * n_x + xj +1]
+																		- (1.0/(H*H)) * u[yi * n_x + xj -1]
+																		- (1.0/(H*H)) * u[(yi + 1) * n_x + xj]
+																		- (1.0/(H*H)) * u[(yi - 1) * n_x + xj]
+																		+4.0/(H*H)* u[yi * n_x + xj]);
+			sum_res += res[yi * n_x + xj] * res[yi * n_x + xj];
+		}
+	}
+	L2norm = sqrt(sum_res / (n_x  * n_y));
+	printf("L2norm: %f\n\n", L2norm);
+}
+

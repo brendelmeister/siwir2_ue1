@@ -45,3 +45,6 @@ void restriction(double* f_co,double* res,const int n_x,const int n_y);
 void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y);
 void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y);
 void calcResiduum(double *res, double *f, double *u, int n_x, int n_y);
+void calculate_L2Norm(double *res, const double *u, const double *f, const int n_x, const int n_y);
+double calcL2Norm(double *res, int n_x, int n_y);
+

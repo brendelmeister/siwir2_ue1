@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <iomanip>
 #include <math.h>
-#include <omp.h>
+//#include <omp.h>
 #include <time.h>
 #include <sys/time.h>
 #include <stdio.h>
@@ -13,9 +13,9 @@
 #define _USE_MATH_DEFINES
 
 //Gauss-Seidel-Stencil
-const double GS_HORIZONTAL=1;
-const double GS_VERTICAL=1;
-const double GS_CENTER=-4;
+const double GS_HORIZONTAL=1.;
+const double GS_VERTICAL=1.;
+const double GS_CENTER=-4.;
 //restriction Stencil
 const double RES_HORIZONTAL=0.125;
 const double RES_VERTICAL=0.125;

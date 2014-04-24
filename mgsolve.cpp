@@ -27,15 +27,13 @@ int main(int argc, char *argv[]) {
 	initializeGrid(u);
 	double* f = new double[NX*NY];
 	memset(f,0,sizeof(double)*NY*NX);
-	do_gauss_seidel(u,f,NX,NY,25);
-	
-	
-// 	for(int i=0;i<n;i++){ //multigrid steps
-// 		mgm( u, f,2,1,NX, NY);
-// 	}
+
+	for(int i=0;i<n;i++){ //multigrid steps
+		mgm( u, f,2,1,NX, NY);
+	}
 	save_in_file("boundaries.txt", u, NX, NY);
-    delete[] u;
-    delete[] f;
+	delete[] u;
+	delete[] f;
 }
 
 void save_in_file(const char *str, double *matrix, const int n_x, const int n_y){
@@ -69,36 +67,36 @@ void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y){
 			if(yi>0){
 				if(xj > 0){
 					// south west
-					u_fi[(yi - 1) * (n_x) + xj - 1]	= 1/4 * 1 * u_co[yi * (n_x) + xj];
+					u_fi[(yi - 1) * (n_x) + xj - 1]	= 1./4.  * u_co[yi * (n_x) + xj];
 				}	
 				if(xj<n_x-1){	
 					// south east
-					u_fi[(yi - 1) * (n_x) + xj + 1]	= 1/4 * 1 * u_co[yi * (n_x) + xj];	
+					u_fi[(yi - 1) * (n_x) + xj + 1]	= 1./4.  * u_co[yi * (n_x) + xj];	
 				}
 				// south
-				u_fi[(yi - 1) * (n_x) + xj] = 1/4 * 2 * u_co[yi * (n_x) + xj];
+				u_fi[(yi - 1) * (n_x) + xj] = 2./4.  * u_co[yi * (n_x) + xj];
 
 			}
 			if(xj>0){
 				// west
-				u_fi[yi * (n_x) + xj - 1] = 1/4 * 2 * u_co[yi * (n_x) + xj];
+				u_fi[yi * (n_x) + xj - 1] = 2./4. * u_co[yi * (n_x) + xj];
 				if(yi < n_y-1){	
 					// north west
-					u_fi[(yi + 1) * (n_x) + xj - 1]	= 1/4 * 1 * u_co[yi * (n_x) + xj];
+					u_fi[(yi + 1) * (n_x) + xj - 1]	= 1./4. * u_co[yi * (n_x) + xj];
 				}
 			}
 			// centre
-			u_fi[yi * (n_x) + xj]= 1/4 * 4 * u_co[yi * (n_x) + xj];
+			u_fi[yi * (n_x) + xj]=  u_co[yi * (n_x) + xj];
 
 			if(xj<n_x-1){
 				// east
-				u_fi[yi * (n_x) + xj + 1]= 1/4 * 2 * u_co[yi * (n_x) + xj];
+				u_fi[yi * (n_x) + xj + 1]= 2./4. * u_co[yi * (n_x) + xj];
 			}
 			if(yi < n_y-1){
 				// north
-				u_fi[(yi + 1) * (n_x) + xj]= 1/4 * 2 * u_co[yi * (n_x) + xj];
+				u_fi[(yi + 1) * (n_x) + xj]= 2./4. * u_co[yi * (n_x) + xj];
 				// north east
-				u_fi[(yi + 1) * (n_x) + xj + 1]	= 1/4 * 1 * u_co[yi * (n_x) + xj];
+				u_fi[(yi + 1) * (n_x) + xj + 1]	= 1./4. * u_co[yi * (n_x) + xj];
 			}
 		}
 	}
@@ -117,6 +115,7 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
 	//#pragma omp parallel
 	for(int it = 0; it < c; ++it ){
 
+	 /*
 	 // gauss seidel "normal" 
 	 for(int yi = 1; yi < n_y-1; ++yi){
 		for(int xj = 1; xj < n_x-1; ++xj){
@@ -128,7 +127,10 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
 										) / 4.0;
 		}
 	 }
+	 */
 	
+	 //red-black
+	 //
 	 //red
 //#pragma omp for schedule(static)
 	 for (int y=1;y<n_y-1;y++)
@@ -202,19 +204,22 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
 	double* f_co=new double[Ny_co*Nx_co]; // coarse f
 
 	restriction(f_co,res, n_x, n_y,0.125, 0.125 ,0.25 ,1.0/16.0); //full weighted restriction
-    delete[] res;
-	if(Nx_co==3||Ny_co==3){
+	delete[] res;
+	if(Nx_co==3||Ny_co==3)
+	{
 		u[0]=f[0]/GS_CENTER; // solve Au=b ??? ToDo: richtig????
-	}else{
+	}
+	else
+	{
 		double* u_co = new double[Nx_co*Ny_co];
 		//for(int k=1;k<nyy;k++)// fuer nyy größer 1
 		memset(u_co,0,sizeof(double)*Ny_co*Nx_co);
 		initCoarseBD(u, u_co , Nx_co);
 
 		mgm( u_co, f_co, v1, v2,Nx_co ,Ny_co); //recursive call
-        delete[] f_co;
+		delete[] f_co;
 		prolongation(u_co,u,n_x,n_y); //prolongation
-        delete[] u_co;
+		delete[] u_co;
 	}
 
 	do_gauss_seidel(u,f,n_x,n_y,v2); //post-smoothing*/
@@ -226,12 +231,13 @@ void residuum(double* res,double* f, double* u, const int n_x,const int n_y){
 	double hx_local = 1.0/n_x;	
 	double hy_local = 1.0/n_y;
 	double north, south, west, east = 0;
-	for(int j=0;j<n_y;j++){
-		for(int i=0;i<n_x;i++){
+	for(int j=1;j<n_y-1;j++){
+		for(int i=1;i<n_x-1;i++){
 			west = u[j*n_x+i-1];
 			east = u[j*n_x+i+1];	
 			north = u[(j+1)*n_x+i];	
 			south = u[(j-1)*n_x+i];
+			/*
 			if(i == 0){
 				west = 0;	
 			}
@@ -244,9 +250,10 @@ void residuum(double* res,double* f, double* u, const int n_x,const int n_y){
 			if(j == n_y-1){
 				south = 0;
 			}
+			*/
 
-			res[j*n_x+i] =f[j*n_x+i]- //f-Au
-				(1/(hx_local*hy_local))*(GS_HORIZONTAL*(west+ east)+
+			res[IDX(i,j)] =f[IDX(i,j)]- //f-Au
+				(1./(hx_local*hy_local))*(GS_HORIZONTAL*(west+ east)+
 						GS_VERTICAL*(south+ north)+
 						GS_CENTER*u[j*n_x+i]);
 		}

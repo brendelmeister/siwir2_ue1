@@ -1,7 +1,8 @@
 /****************************************************************************
 *                   FAU Erlangen SS14
 *                   Siwir2 Uebung 1 - Elliptic PDE with Multigrid
-*                   written by Lina Gundelwein, Michael Hildebrand, Tim Brendel
+*                   written by Lina Gundelwein, Michael Hildebrand,
+*                   Tim Brendel, Lorenz Hufnagel
 *                   April 2014
 *****************************************************************************/
 

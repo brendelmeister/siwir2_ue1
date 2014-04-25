@@ -29,21 +29,28 @@ int main(int argc, char *argv[]) {
 	double* f = new double[NX*NY];
 	memset(f,0,sizeof(double)*NY*NX);
 	
-	do_gauss_seidel(u,f, NX, NY, 100);
+	do_gauss_seidel(u,f, NX, NY, 10);
 	double* res = new double[NY*NX];
 	memset(res,0,sizeof(double)*NY*NX);
+
 	residuum(res,f, u, NX,NY);
+
 	double l2norm = calcL2Norm(res, NX, NY);
 	cout<<l2norm<<endl;
 	save_in_file("residuum_gs100_neue_l2.txt", res, NX, NY);
+
+	memset(res,0,sizeof(double)*NY*NX);
 	calculate_L2Norm(res, u, f, NX, NY);
 	save_in_file("residuum_gs100_alte_l2.txt", res, NX, NY);
 	delete[] res;
 
-// 	for(int i=0;i<n;i++){ //multigrid steps
-// 		mgm( u, f,2,1,NX, NY);
-// 	}
-	save_in_file("boundaries.txt", u, NX, NY);
+	/*
+ 	for(int i=0;i<n;i++){ //multigrid steps
+ 		mgm( u, f,2,1,NX, NY);
+ 	}
+	*/
+
+	save_in_file("boundaries.txt", res, NX, NY);
 	delete[] u;
 	delete[] f;
 }
@@ -117,52 +124,52 @@ void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y){
 
 void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const int c){
 
-	if(n_x != n_y){
-		cout<<"error: grid not quadratic"<<endl;
-		exit(EXIT_FAILURE);
-	}
-	double h = 1.0 / n_x;
+   if(n_x != n_y){
+      cout<<"error: grid not quadratic"<<endl;
+      exit(EXIT_FAILURE);
+   }
+   double h = 1.0 / n_x;
 
 
-	//#pragma omp parallel
-	for(int it = 0; it < c; ++it ){
+   //#pragma omp parallel
+   for(int it = 0; it < c; ++it ){
 
-	 /*
-	 // gauss seidel "normal" 
-	 for(int yi = 1; yi < n_y-1; ++yi){
-		for(int xj = 1; xj < n_x-1; ++xj){
-			u[yi * n_x + xj] = ( (h*h) *f[yi * n_x + xj]
-												+  u[yi * n_x + xj +1]
-												+  u[yi * n_x + xj -1]
-												+  u[(yi + 1) * n_x + xj]
-												+  u[(yi - 1) * n_x + xj]
-										) / 4.0;
-		}
-	 }
-	 */
-	
-	 //red-black
-	 //
-	 //red
-//#pragma omp for schedule(static)
-	 for (int y=1;y<n_y-1;y++)
+      /*
+      // gauss seidel "normal" 
+      for(int yi = 1; yi < n_y-1; ++yi){
+      for(int xj = 1; xj < n_x-1; ++xj){
+      u[yi * n_x + xj] = ( (h*h) *f[yi * n_x + xj]
+      +  u[yi * n_x + xj +1]
+      +  u[yi * n_x + xj -1]
+      +  u[(yi + 1) * n_x + xj]
+      +  u[(yi - 1) * n_x + xj]
+      ) / 4.0;
+      }
+      }
+      */
+
+      //red-black
+
+      //red
+      //#pragma omp for schedule(static)
+      for (int y=1;y<n_y-1;y++)
+      {
+	 for (int x=(y%2)+1;x<n_x-1;x+=2)
 	 {
-	  for (int x=(y%2)+1;x<n_x-1;x+=2)
-	  {
-	   u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
-	  }
+	    u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
 	 }
-	 //black
-//#pragma omp for schedule(static)
-	 for (int y=1;y<n_y-1;y++)
+      }
+      //black
+      //#pragma omp for schedule(static)
+      for (int y=1;y<n_y-1;y++)
+      {
+	 for (int x=((y+1)%2)+1;x<n_x-1;x+=2)
 	 {
-	  for (int x=((y+1)%2)+1;x<n_x-1;x+=2)
-	  {
-	   u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
-	  }
+	    u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
 	 }
+      }
 
-	}
+   }
 }
 
 
@@ -193,9 +200,10 @@ void restriction(double* f_co,double* res,const int n_x,const int n_y){
 		f_co[Ny_co*Nx_co+i] = res[Ny_co*2*n_x+i*2];
 	}
 
-	for(int j=0;j<Ny_co;j++){
-		for(int i=0;i<Nx_co;i++){
-			f_co[j*Ny_co+i] =RES_CENTER*res[j*2*n_x+i*2]+ //restriction stencil
+	for(int j=1;j<Ny_co-1;j++){
+		for(int i=1;i<Nx_co-1;i++){
+			f_co[j*Nx_co+i] =
+			RES_CENTER*res[IDX(2*j,2*i)]+ //restriction stencil
 				RES_HORIZONTAL*(res[(j*2*n_x+i*2)-1]+ res[(j*2*n_x+i*2)+1])+
 				RES_VERTICAL*(res[((j*2-1)*n_x+i*2)]+ res[((j*2+1)*n_x+i*2)])+
 				RES_CORNER*(res[((j*2-1)*n_x+i*2)-1]+ res[((j*2-1)*n_x+i*2)+1]+
@@ -216,36 +224,51 @@ void initCoarseBD(const double* u_fi, double* u_co, int Nx_co){
 //recursive multigrid function
 void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
 
-	do_gauss_seidel(u,f,n_x,n_y,v1);//Pre-smoothing
+   do_gauss_seidel(u,f,n_x,n_y,v1);//Pre-smoothing
 
-	double* res = new double[n_y*n_x];
+   double* res = new double[n_y*n_x];
 
-	residuum(res, f, u, n_x, n_y); //residuum calculation
+   residuum(res, f, u, n_x, n_y); //residuum calculation
 
-	int Nx_co=(n_x/2)+1; //calculating coarse grid size
-	int Ny_co=(n_y/2)+1;
-	double* f_co=new double[Ny_co*Nx_co]; // coarse f
+   int Nx_co=(n_x/2)+1; //calculating coarse grid size
+   int Ny_co=(n_y/2)+1;
+   double* f_co=new double[Ny_co*Nx_co]; // coarse f
 
-	restriction(f_co,res, n_x, n_y); //full weighted restriction
-	delete[] res;
-	if(Nx_co==3||Ny_co==3)
-	{
-		u[0]=f[0]/GS_CENTER; // solve Au=b ??? ToDo: richtig????
-	}
-	else
-	{
-		double* u_co = new double[Nx_co*Ny_co];
-		//for(int k=1;k<nyy;k++)// fuer nyy größer 1
-		memset(u_co,0,sizeof(double)*Ny_co*Nx_co);
-		initCoarseBD(u, u_co , Nx_co);
+   restriction(f_co,res, n_x, n_y); //full weighted restriction
 
-		mgm( u_co, f_co, v1, v2,Nx_co ,Ny_co); //recursive call
-		delete[] f_co;
-		prolongation(u_co,u,n_x,n_y); //prolongation
-		delete[] u_co;
-	}
+   delete[] res;
 
-	do_gauss_seidel(u,f,n_x,n_y,v2); //post-smoothing*/
+   if(Nx_co==3||Ny_co==3)
+   {
+      //u[0]=f[0]/GS_CENTER; // solve Au=b ??? ToDo: richtig????
+
+      /* LH: Sollte mMn so aussehen (ist im Endeffekt Gauss-Seidel).
+       * Drei von den Randwarten sind ja eigentlich 0, lassen wir aber mal trotzdem so stehen, den Code.
+       */
+
+      double h_co = 1.0/2.;
+
+      u[1 * Nx_co + 1] = ( (h_co*h_co) * f[1 * Nx_co + 1]
+	    +  u[0 * Nx_co + 1]
+	    +  u[2 * Nx_co + 1]
+	    +  u[1 * Nx_co + 2]
+	    +  u[1 * Nx_co + 0]
+	    ) / 4.0;
+   }
+   else
+   {
+      double* u_co = new double[Nx_co*Ny_co];
+      //for(int k=1;k<nyy;k++)// fuer nyy größer 1
+      memset(u_co,0,sizeof(double)*Ny_co*Nx_co);
+      initCoarseBD(u, u_co , Nx_co);
+
+      mgm( u_co, f_co, v1, v2,Nx_co ,Ny_co); //recursive call
+      delete[] f_co;
+      prolongation(u_co,u,n_x,n_y); //prolongation
+      delete[] u_co;
+   }
+
+   do_gauss_seidel(u,f,n_x,n_y,v2); //post-smoothing*/
 
 }
 
@@ -253,35 +276,17 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
 void residuum(double* res,double* f, double* u, const int n_x,const int n_y){
 	double hx_local = 1.0/n_x;	
 	double hy_local = 1.0/n_y;
-// 	double north, south, west, east = 0;
 	for(int j=1;j<n_y-1;j++){
-		for(int i=1;i<n_x-1;i++){
-/*			west = u[j*n_x+i-1];
-			east = u[j*n_x+i+1];	
-			north = u[(j+1)*n_x+i];	
-			south = u[(j-1)*n_x+i];
-			
-			if(i == 0){
-				west = 0;	
-			}
-			if(j == 0){
-				south = 0;
-			}
-			if(i == n_x-1){
-				east = 0;
-			}
-			if(j == n_y-1){
-				south = 0;
-			}
-*/			
-
-			res[IDX(i,j)] =f[IDX(i,j)]- //f-Au
-				(1.0/(hx_local*hy_local))*(u[j*n_x+i-1]
-													+ u[j*n_x+i+1]
-													+ u[(j-1)*n_x+i]
-													+ u[(j+1)*n_x+i]
-													- 4.0* u[j*n_x+i]);
-		}
+	   for(int i=1;i<n_x-1;i++){
+	      res[IDX(i,j)] =  //Au-f
+		 (1.0/(hx_local*hy_local))*
+		 (4.0*u[IDX(i,j)]
+		  - u[IDX( i ,j-1)]
+		  - u[IDX( i ,j+1)]
+		  - u[IDX(i+1, j )]
+		  - u[IDX(i-1, j )])
+		-f[IDX(i,j)] ;
+	   }
 	}
 }
 
@@ -308,20 +313,27 @@ void measureError(double *u, double gridsize){
 
 void calculate_L2Norm(double *res, const double *u, const double *f, const int n_x, const int n_y){
 
-	double L2norm = 0.0;
-	double sum_res = 0.0;
-	//    #pragma omp parallel for num_threads(32) if(n_x > 2500 && n_y > 2500)
-	for(int yi = 1; yi < n_y-1; ++yi){
-		for(int xj = 1; xj < n_x-1; ++xj){
-			res[yi * n_x + xj] = ( f[yi * n_x + xj]		- (1.0/(H*H)) * u[yi * n_x + xj +1]
-																		- (1.0/(H*H)) * u[yi * n_x + xj -1]
-																		- (1.0/(H*H)) * u[(yi + 1) * n_x + xj]
-																		- (1.0/(H*H)) * u[(yi - 1) * n_x + xj]
-																		+4.0/(H*H)* u[yi * n_x + xj]);
-			sum_res += res[yi * n_x + xj] * res[yi * n_x + xj];
-		}
-	}
-	L2norm = sqrt(sum_res / (n_x  * n_y));
-	printf("L2norm: %f\n\n", L2norm);
+   double L2norm = 0.0;
+   double sum_res = 0.0;
+
+	double hx_local = 1.0/n_x;	
+	double hy_local = 1.0/n_y;
+   //    #pragma omp parallel for num_threads(32) if(n_x > 2500 && n_y > 2500)
+   for(int yi = 1; yi < n_y-1; ++yi)
+   {
+      for(int xj = 1; xj < n_x-1; ++xj)
+      {
+	 res[yi * n_x + xj] =  -f[yi * n_x + xj]		
+	       + (1.0/(hy_local*hx_local)) *(
+	       -u[yi * n_x + xj +1]
+	       -u[yi * n_x + xj -1]
+	       -u[(yi + 1) * n_x + xj]
+	       -u[(yi - 1) * n_x + xj]
+	       +4.0* u[yi * n_x + xj]);
+	 sum_res += res[yi * n_x + xj] * res[yi * n_x + xj];
+      }
+   }
+   L2norm = sqrt(sum_res / (n_x  * n_y));
+   printf("L2norm: %f\n\n", L2norm);
 }
 

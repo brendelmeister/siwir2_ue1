@@ -29,7 +29,8 @@ int main(int argc, char *argv[]) {
 	double* f = new double[NX*NY];
 	memset(f,0,sizeof(double)*NY*NX);
 	
-	do_gauss_seidel(u,f, NX, NY, 10);
+	/*
+	do_gauss_seidel(u,f, NX, NY, 100);
 	double* res = new double[NY*NX];
 	memset(res,0,sizeof(double)*NY*NX);
 
@@ -44,13 +45,12 @@ int main(int argc, char *argv[]) {
 	save_in_file("residuum_gs100_alte_l2.txt", res, NX, NY);
 	delete[] res;
 
-	/*
- 	for(int i=0;i<n;i++){ //multigrid steps
- 		mgm( u, f,2,1,NX, NY);
- 	}
 	*/
+ 	for(int i=0;i<n;i++){ //multigrid steps
+ 		mgm(u,f,2,1,NX, NY);
+ 	}
 
-	save_in_file("boundaries.txt", res, NX, NY);
+	save_in_file("boundaries.txt", u, NX, NY);
 	delete[] u;
 	delete[] f;
 }
@@ -81,9 +81,13 @@ void save_in_file(const char *str, double *matrix, const int n_x, const int n_y)
 /*prolongation von grob/coarse nach fein/fine*/
 void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y){
 
-	for(int yi = 0; yi < n_y; ++yi){
-		for(int xj = 0; xj < n_x ; ++xj){
-			if(yi>0){
+	/*
+	for(int yi = 0; yi < n_y; ++yi)
+	{
+		for(int xj = 0; xj < n_x ; ++xj)
+		{
+			if(yi>0)
+			{
 				if(xj > 0){
 					// south west
 					u_fi[(yi - 1) * (n_x) + xj - 1]	= 1./4.  * u_co[yi * (n_x) + xj];
@@ -119,6 +123,27 @@ void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y){
 			}
 		}
 	}
+	*/
+
+ // LH: Try the Interpolation/Prolongation algorithm from Pflaum-Script p. 6
+	int Nx_co=(n_x/2)+1;
+	int Ny_co=(n_y/2)+1;
+	
+	for(int i = 0; i < Nx_co-1; ++i)
+	{
+		for(int j = 0; j < Ny_co-1; ++j)
+		{
+			u_fi[IDX(2*i,2*j)] 		=        u_co[j * Nx_co+ i];
+			u_fi[IDX(2*i+1,2*j)] 	=1./2. * (u_co[j * Nx_co+ i] 
+														+ u_co[j * Nx_co+ i+1]);
+			u_fi[IDX(2*i,2*j+1)] 	=1./2. * (u_co[j * Nx_co+ i] 
+														+ u_co[(j+1) * Nx_co+i]);
+			u_fi[IDX(2*i+1,2*j+1)] 	=1./4. * (u_co[j * Nx_co+ i] 
+														+ u_co[(j+1) * Nx_co+i]
+														+ u_co[j * Nx_co+ i+1]
+														+ u_co[(j+1) * Nx_co+ i+1]);
+		}
+	}
 }
 
 
@@ -134,42 +159,42 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
    //#pragma omp parallel
    for(int it = 0; it < c; ++it ){
 
-      /*
-      // gauss seidel "normal" 
-      for(int yi = 1; yi < n_y-1; ++yi){
-      for(int xj = 1; xj < n_x-1; ++xj){
-      u[yi * n_x + xj] = ( (h*h) *f[yi * n_x + xj]
-      +  u[yi * n_x + xj +1]
-      +  u[yi * n_x + xj -1]
-      +  u[(yi + 1) * n_x + xj]
-      +  u[(yi - 1) * n_x + xj]
-      ) / 4.0;
-      }
-      }
-      */
+		// gauss seidel "normal" 
+		for(int yi = 1; yi < n_y-1; ++yi){
+			for(int xj = 1; xj < n_x-1; ++xj){
+				u[yi * n_x + xj] = ( h * h * f[yi * n_x + xj]
+						+  u[yi * n_x + xj +1]
+						+  u[yi * n_x + xj -1]
+						+  u[(yi + 1) * n_x + xj]
+						+  u[(yi - 1) * n_x + xj]
+						) / 4.0;
+			}
+		}
 
-      //red-black
+		//red-black
+		/*
 
-      //red
-      //#pragma omp for schedule(static)
-      for (int y=1;y<n_y-1;y++)
-      {
-	 for (int x=(y%2)+1;x<n_x-1;x+=2)
-	 {
-	    u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
-	 }
-      }
-      //black
-      //#pragma omp for schedule(static)
-      for (int y=1;y<n_y-1;y++)
-      {
-	 for (int x=((y+1)%2)+1;x<n_x-1;x+=2)
-	 {
-	    u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
-	 }
-      }
+		//red
+		//#pragma omp for schedule(static)
+		for (int y=1;y<n_y-1;y++)
+		{
+			for (int x=(y%2)+1;x<n_x-1;x+=2)
+			{
+				u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
+			}
+		}
+		//black
+		//#pragma omp for schedule(static)
+		for (int y=1;y<n_y-1;y++)
+		{
+			for (int x=((y+1)%2)+1;x<n_x-1;x+=2)
+			{
+				u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
+			}
+		}
+		*/
 
-   }
+	}
 }
 
 
@@ -192,12 +217,12 @@ void restriction(double* f_co,double* res,const int n_x,const int n_y){
 	//x=0(linker rand) und x=1(rechter rand)
 	for(int j=0; j<Ny_co;j++){
 		f_co[j*Nx_co+0] = res[j*2*n_x+0];
-		f_co[j*Nx_co+Nx_co] = res[j*2*n_x+n_x];
+		f_co[j*Nx_co+Nx_co-1] = res[j*2*n_x+n_x-1];
 	}
 	//y=0(unterer rand) und y=1(oberer rand)
 	for(int i=0; i<Nx_co;i++){
 		f_co[0*Nx_co+i] = res[0*2*n_x+i*2];
-		f_co[Ny_co*Nx_co+i] = res[Ny_co*2*n_x+i*2];
+		f_co[(Ny_co-1)*Nx_co+i] = res[(n_y-1)*n_x+i*2];
 	}
 
 	for(int j=1;j<Ny_co-1;j++){
@@ -214,8 +239,15 @@ void restriction(double* f_co,double* res,const int n_x,const int n_y){
 
 // copy boundaries from fine to coarse grid
 void initCoarseBD(const double* u_fi, double* u_co, int Nx_co){
-	for(int j=0;j<Nx_co;j++){
-		u_co[j]= u_fi[2*j];
+	int n_x=Nx_co*2-1;
+	for(int i=0;i<Nx_co;i++){
+		u_co[0*Nx_co+i] = u_fi[0*2*n_x+i*2];
+		u_co[(Nx_co-1)*Nx_co+i] = u_fi[(n_x-1)*n_x+i*2];
+	}
+	
+	for(int j=0; j<Nx_co;j++){
+		u_co[j*Nx_co+0] = u_fi[j*2*n_x+0];
+		u_co[j*Nx_co+Nx_co-1] = u_fi[j*2*n_x+n_x-1];
 	}
 
 }

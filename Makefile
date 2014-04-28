@@ -1,22 +1,22 @@
 CXX = g++
 CXXFLAGS ?= -ansi -Winline -Wshadow -Wall -O3 -ggdb
-SOURCES = mgsolve.cpp
-OBJECTS = mgsolve.o
+SOURCES = mgsolveN.cpp
+OBJECTS = mgsolveN.o
 HEADERS = header.h
 LIBS = -lm
 
 .PHONY: all clean
 
-all: mgsolve.o mgsolve
+all: mgsolveN.o mgsolveN
 
 # generic compilation rule
 %.o : %.cpp
 	${CXX} ${CXXFLAGS} -c $<
 
 #how to link
-mgsolve: ${OBJECTS}
+mgsolveN: ${OBJECTS}
 	${CXX} -o $@ ${OBJECTS} ${LIBS}
 
 clean:
-	rm -f *.o *~ *.txt mgsolve 
+	rm -f *.o *~ *.txt mgsolveN
 

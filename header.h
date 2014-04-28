@@ -34,6 +34,7 @@ static int NY; // grid points in y-direction
 
 
 int getGridPointsDirichlet();
+int getGridPointsNeumann();
 void initializeGrid(double* u);
 void initialize_u_with_boundary_conditions(double *u, const int n_x, const int n_y, const double h_x, const double h_y);
 void initCoarseBD(const double* u_fi, double* u_co, int Nx_co);

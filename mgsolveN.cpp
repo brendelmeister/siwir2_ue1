@@ -177,9 +177,9 @@ void initializeGrid(double* u){
     for(int i = 1; i < NY-2; ++i){
         // TODO: Neumann boundary condition
         // x = 0; left column
-        u[i*NX+1] =
+//        u[i*NX+1] =
         // x = 1; right column
-        u[i*NX +NX-1] = 
+  //      u[i*NX +NX-1] = 
     }
 
     // TODO:  initialize ghost layer;

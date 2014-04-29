@@ -31,20 +31,20 @@ int main(int argc, char *argv[]) {
     memset(f,0,sizeof(double)*NY*NX);
 
 
-    /* do_gauss_seidel(u,f, NX, NY, 1000);
-       double* res = new double[NY*NX];
-       memset(res,0,sizeof(double)*NY*NX);
+    /*do_gauss_seidel(u,f, NX, NY, 100);
+      double* res = new double[NY*NX];
+      memset(res,0,sizeof(double)*NY*NX);
 
-       residuum(res,f, u, NX,NY);
+      residuum(res,f, u, NX,NY);
 
-       double l2norm = calcL2Norm(res, NX, NY);
-       cout<<l2norm<<endl;
-       save_in_file("residuum_gs100_neue_l2.txt", res, NX, NY);
+      double l2norm = calcL2Norm(res, NX, NY);
+      cout<<l2norm<<endl;
+      save_in_file("residuum_gs100_neue_l2.txt", res, NX, NY);
 
-       memset(res,0,sizeof(double)*NY*NX);
-       calculate_L2Norm(res, u, f, NX, NY);
-       save_in_file("residuum_gs100_alte_l2.txt", res, NX, NY);
-       delete[] res;
+      memset(res,0,sizeof(double)*NY*NX);
+      calculate_L2Norm(res, u, f, NX, NY);
+      save_in_file("residuum_gs100_alte_l2.txt", res, NX, NY);
+      delete[] res;
 
      */
     for(int i=0;i<n;i++){ //multigrid steps
@@ -91,13 +91,12 @@ void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y){
     {
         for(int i = 0; i < Nx_co-1; ++i)
         {
-            u_fi[IDX(2*i,2*j)]	    = u_co[j * Nx_co+ i]; // centre 
-            u_fi[IDX(2*i+1,2*j)]  	= 1./2. * (u_co[j * Nx_co+ i] + u_co[j * Nx_co+ i+1]);
-            u_fi[IDX(2*i,2*j+1)]    = 1./2. * (u_co[j * Nx_co+ i] + u_co[(j+1) * Nx_co+i]);
-            u_fi[IDX(2*i+1,2*j+1)] 	= 1./4. * (u_co[j * Nx_co+ i] + u_co[(j+1) * Nx_co+i]+ u_co[j * Nx_co+ i+1]+ u_co[(j+1) * Nx_co+ i+1]);
-        }
+            u_fi[IDX(2*i,2*j)]	    += u_co[j * Nx_co+ i]; // centre 
+            u_fi[IDX(2*i+1,2*j)]  	+= 1./2. * (u_co[j * Nx_co+ i] + u_co[j * Nx_co+ i+1]);
+            u_fi[IDX(2*i,2*j+1)]    += 1./2. * (u_co[j * Nx_co+ i] + u_co[(j+1) * Nx_co+i]);
+            u_fi[IDX(2*i+1,2*j+1)] 	+= 1./4. * (u_co[j * Nx_co+ i] + u_co[(j+1) * Nx_co+i]+ u_co[j * Nx_co+ i+1]+ u_co[(j+1) * Nx_co+ i+1]);
+        } 
     }
-
 }
 
 
@@ -113,44 +112,41 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
     //#pragma omp parallel
     for(int it = 0; it < c; ++it ){
 
-        // gauss seidel "normal" 
-        for(int yi = 1; yi < n_y-1; ++yi){
-            for(int xj = 1; xj < n_x-1; ++xj){
-                u[yi * n_x + xj] = ( h * h * f[yi * n_x + xj]
-                        +  u[yi * n_x + xj +1]
-                        +  u[yi * n_x + xj -1]
-                        +  u[(yi + 1) * n_x + xj]
-                        +  u[(yi - 1) * n_x + xj]
-                        ) / 4.0;
-            }
-        }
+        /*        // gauss seidel "normal" 
+                  for(int yi = 1; yi < n_y-1; ++yi){
+                  for(int xj = 1; xj < n_x-1; ++xj){
+                  u[yi * n_x + xj] = ( h * h * f[yi * n_x + xj]
+                  +  u[yi * n_x + xj +1]
+                  +  u[yi * n_x + xj -1]
+                  +  u[(yi + 1) * n_x + xj]
+                  +  u[(yi - 1) * n_x + xj]
+                  ) / 4.0;
+                  }
+                  }
+         */
+
 
         //red-black
-        /*
-
         //red
         //#pragma omp for schedule(static)
         for (int y=1;y<n_y-1;y++)
         {
-        for (int x=(y%2)+1;x<n_x-1;x+=2)
-        {
-        u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
-        }
+            for (int x=(y%2)+1;x<n_x-1;x+=2)
+            {
+                u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
+            }
         }
         //black
         //#pragma omp for schedule(static)
         for (int y=1;y<n_y-1;y++)
         {
-        for (int x=((y+1)%2)+1;x<n_x-1;x+=2)
-        {
-        u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
+            for (int x=((y+1)%2)+1;x<n_x-1;x+=2)
+            {
+                u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
+            }
         }
-        }
-         */
-
     }
 }
-
 
 int getGridPointsDirichlet(){
     return pow(2,l)+1;
@@ -161,6 +157,7 @@ void initializeGrid(double* u){
         u[(NY-1) * NX + i] = sin(M_PI*i*H) * sinh(M_PI*(NY-1)*H);
     }
 }
+
 
 
 //do restriction from residuum to f_coarse
@@ -182,7 +179,7 @@ void restriction(double* f_co,double* res,const int n_x,const int n_y){
     for(int j=1;j<Ny_co-1;j++){
         for(int i=1;i<Nx_co-1;i++){
             f_co[j*Nx_co+i] =
-                RES_CENTER*res[IDX(2*j,2*i)]+ //restriction stencil
+                RES_CENTER*res[IDX(2*i,2*j)]+ //restriction stencil
                 RES_HORIZONTAL*(res[(j*2*n_x+i*2)-1]+ res[(j*2*n_x+i*2)+1])+
                 RES_VERTICAL*(res[((j*2-1)*n_x+i*2)]+ res[((j*2+1)*n_x+i*2)])+
                 RES_CORNER*(res[((j*2-1)*n_x+i*2)-1]+ res[((j*2-1)*n_x+i*2)+1]+
@@ -203,26 +200,24 @@ void initCoarseBD(const double* u_fi, double* u_co, int Nx_co){
         u_co[j*Nx_co+0] = u_fi[j*2*n_x+0];
         u_co[j*Nx_co+Nx_co-1] = u_fi[j*2*n_x+n_x-1];
     }
-
 }
 
 
 //recursive multigrid function
 void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
-   // struct timeval start, end;
     do_gauss_seidel(u,f,n_x,n_y,v1);//Pre-smoothing
 
     double* res = new double[n_y*n_x];
-
     residuum(res, f, u, n_x, n_y); //residuum calculation
 
     int Nx_co=(n_x/2)+1; //calculating coarse grid size
     int Ny_co=(n_y/2)+1;
     double* f_co=new double[Ny_co*Nx_co]; // coarse f
-
     restriction(f_co,res, n_x, n_y); //full weighted restriction
 
     delete[] res;
+    double* c_co=new double[Ny_co*Nx_co]; // coarse f
+    memset(c_co,0, sizeof(double)*Ny_co*Nx_co);
 
     if(Nx_co==3||Ny_co==3)
     {
@@ -234,7 +229,7 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
 
         double h_co = 1.0/2.;
 
-        u[1 * Nx_co + 1] = ( (h_co*h_co) * f[1 * Nx_co + 1]
+        c_co[1 * Nx_co + 1] = ( (h_co*h_co) * f[1 * Nx_co + 1]
                 +  u[0 * Nx_co + 1]
                 +  u[2 * Nx_co + 1]
                 +  u[1 * Nx_co + 2]
@@ -243,28 +238,11 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
     }
     else
     {
-        double* u_co = new double[Nx_co*Ny_co];
-        //for(int k=1;k<nyy;k++)// fuer nyy größer 1
-        memset(u_co,0,sizeof(double)*Ny_co*Nx_co);
-        initCoarseBD(u, u_co , Nx_co);
-
-        mgm( u_co, f_co, v1, v2,Nx_co ,Ny_co); //recursive call
+        mgm(c_co, f_co, v1, v2,Nx_co ,Ny_co); //recursive call
         delete[] f_co;
-       // long seconds, useconds;
-       // gettimeofday(&start, NULL);  
-       // prolongation(u_co,u,n_x,n_y); //prolongation
-       // gettimeofday(&end, NULL);
-       // seconds = end.tv_sec -start.tv_sec;
-       // useconds = end.tv_usec-start.tv_usec;
-       // if(useconds <0){
-       //     useconds+=1000000;
-       //     seconds--;
-       // }
-       // printf("Dauer prolongation: %ld sec %ld usec\n\n", seconds, useconds);
-
-        delete[] u_co;
     }
-
+    prolongation(c_co,u,n_x,n_y); //prolongation
+    delete[] c_co;
     do_gauss_seidel(u,f,n_x,n_y,v2); //post-smoothing*/
 
 }
@@ -275,14 +253,15 @@ void residuum(double* res,double* f, double* u, const int n_x,const int n_y){
     double hy_local = 1.0/n_y;
     for(int j=1;j<n_y-1;j++){
         for(int i=1;i<n_x-1;i++){
-            res[IDX(i,j)] =  //Au-f
+            res[IDX(i,j)] =  //f-Au
+                f[IDX(i,j)] -
                 (1.0/(hx_local*hy_local))*
                 (4.0*u[IDX(i,j)]
                  - u[IDX( i ,j-1)]
                  - u[IDX( i ,j+1)]
                  - u[IDX(i+1, j )]
                  - u[IDX(i-1, j )])
-                -f[IDX(i,j)] ;
+                ;
         }
     }
 }

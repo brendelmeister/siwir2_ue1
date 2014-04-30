@@ -42,6 +42,7 @@ int main(int argc, char *argv[]) {
     memset(res,0,sizeof(double)*NY*NX);
     double l2norm = 0;
     double convergence = 0;
+    double convergence_old = 1;
 
     /* residuum(res,f, u, NX,NY);
 
@@ -67,6 +68,8 @@ int main(int argc, char *argv[]) {
         l2norm = calcL2Norm(res, NX,NY);
         cout<<"L2 Norm: "<<l2norm<<endl;
         convergence = calculateConvergence( u,u_alt, con);
+        convergence = convergence /convergence_old;
+        convergence_old = convergence;
         cout<<"Convergence rate: "<<convergence<<endl;
         memcpy(u_alt, u, sizeof(double)*NX*NY);
 
@@ -154,7 +157,7 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
                   for(int xj = 1; xj < n_x-1; ++xj){
                   u[yi * n_x + xj] = ( h * h * f[yi * n_x + xj]
                   +  u[yi * n_x + xj +1]
-                  +  u[yi * n_x + xj -1]
+                  +  u[yi * n_x + xj -1]inf
                   +  u[(yi + 1) * n_x + xj]
                   +  u[(yi - 1) * n_x + xj]
                   ) / 4.0;
@@ -346,7 +349,7 @@ double calculateConvergence(double * u, double *u_alt, double *con){
             //            con[j*NX+i] = (u[j*NX+i]- sin(M_PI*j*H)*sinh(M_PI*i*H)* sin(M_PI*j*H)*sinh(M_PI*i*H))/
             //            abs((u_alt[j*NX+i]-( sin(M_PI*j*H)*sinh(M_PI*i*H)* sin(M_PI*j*H)*sinh(M_PI*i*H))));
             //            convergence += con[j*NX+i];
-            con[j*NX+i] = (u[j*NX+i])/(u_alt[j*NX+i]);
+            con[j*NX+i] = (u[j*NX+i])-(u_alt[j*NX+i]);
             //            convergence += con[j*NX+i];
 
         }

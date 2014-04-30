@@ -49,4 +49,4 @@ void calcResiduum(double *res, double *f, double *u, int n_x, int n_y);
 double calculate_L2Norm(double *res, const double *u, const double *f, const int n_x, const int n_y);
 double calcL2Norm(double *res, int n_x, int n_y);
 double calculateConvergence(double* u, double* u_alt, double* con);
-void measureError(double* u, int n_x, int n_y, double * error);
+void measureError(double* u, double * error);

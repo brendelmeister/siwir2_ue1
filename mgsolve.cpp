@@ -27,14 +27,14 @@ int main(int argc, char *argv[]) {
     double* u = new double[NX*NY]; // initialise arrays
     memset(u,0,sizeof(double)*NY*NX);
     initializeGrid(u);
-   
-   double* f = new double[NX*NY];
+
+    double* f = new double[NX*NY];
     memset(f,0,sizeof(double)*NY*NX);
-    
+
     double* con = new double[NX*NY];
     memset(con,0,sizeof(double)*NY*NX);
-   
-   double* u_alt = new double[NX*NY];
+
+    double* u_alt = new double[NX*NY];
     memset(u_alt,0,sizeof(double)*NY*NX);
 
     //do_gauss_seidel(u,f, NX, NY, 100);
@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
        delete[] res;
 
      */
-    
+
     // time measurements
     struct timeval start, end;
     long seconds, useconds;
@@ -75,14 +75,19 @@ int main(int argc, char *argv[]) {
     seconds = end.tv_sec -start.tv_sec;
     useconds = end.tv_usec-start.tv_usec;
     if(useconds <0){
-         useconds+=1000000;
-         seconds--;
+        useconds+=1000000;
+        seconds--;
     }
     cout<<"Duration: "<<seconds<<" sec "<<useconds<<" usec"<<endl;
-  
-  save_in_file("solution.txt", u, NX, NY);
-   
-   delete[] u;
+
+    double* error = new double[NX*NY]; 
+    save_in_file("solution.txt", u, NX, NY);
+    measureError(u,error);
+    char filename[13];
+    sprintf(filename, "error%u.txt", NX-1);
+    save_in_file(filename, error , NX, NY);
+
+    delete[] u;
     delete[] f;
     delete[] u_alt;
     delete[] con;
@@ -237,18 +242,10 @@ void initCoarseBD(const double* u_fi, double* u_co, int Nx_co){
 
 //recursive multigrid function
 void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
-   double* error = new double[n_x*n_y];    // ERROR MEASUREMENT
-    //TODO the last error file always looks wrong (only half of it correct)
-   if(((n_x-1)%8 == 0) && n_x-1 <= 256){
-       measureError(u, n_x, n_y, error);
-       char filename[13];
-       sprintf(filename, "error%u.txt", n_x-1);
-       save_in_file(filename, error , n_x, n_y);
-    }
-    delete[] error;
-   
-   
-   do_gauss_seidel(u,f,n_x,n_y,v1);//Pre-smoothing
+
+
+
+    do_gauss_seidel(u,f,n_x,n_y,v1);//Pre-smoothing
 
     double* res = new double[n_y*n_x];
     residuum(res, f, u, n_x, n_y); //residuum calculation
@@ -287,10 +284,18 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
     prolongation(c_co,u,n_x,n_y); //prolongation
     delete[] c_co;
     do_gauss_seidel(u,f,n_x,n_y,v2); //post-smoothing*/
-   
-   
 
 
+    /*double* error = new double[n_x*n_y];    // ERROR MEASUREMENT
+    //TODO the last error file always looks wrong (only half of it correct)
+    if(((n_x-1)%8 == 0) && n_x-1 <= 256){
+    measureError(u, n_x, n_y, error);
+    char filename[13];
+    sprintf(filename, "error%u.txt", n_x-1);
+    save_in_file(filename, error , n_x, n_y);
+    }
+    delete[] error;
+     */
 }
 
 //calculates residuum
@@ -324,11 +329,11 @@ double calcL2Norm(double *res, int n_x, int n_y){
 }
 
 //TODO check what is wrong; change sgn, i think it should be sqrt(u*u-sin*sinh*sin*sinh), but it returns negative
-void measureError(double *u, int n_x, int n_y, double *error){
-    double h = 1./(n_x-1);
-    for(int j = 0; j<n_y; j++){
-        for(int i = 0; i < n_x; i++){
-            error[j*n_x+i] = sqrt( sin(M_PI*j*h)*sinh(M_PI*i*h)* sin(M_PI*j*h)*sinh(M_PI*i*h)-u[j*n_x+i]*u[j*n_x+i]);
+void measureError(double *u, double *error){
+    double h = 1./(NX-1);
+    for(int j = 0; j<NY; j++){
+        for(int i = 0; i < NX; i++){
+            error[j*NX+i] = sqrt( (-sin(M_PI*i*h)*sinh(M_PI*j*h)+u[j*NX+i])* (-sin(M_PI*i*h)*sinh(M_PI*j*h)+u[j*NX+i]));
         }
     }
 }
@@ -338,12 +343,12 @@ double calculateConvergence(double * u, double *u_alt, double *con){
     double convergence = 0;
     for(int j = 1; j<NY-1; j++){
         for(int i = 1; i < NX-1; i++){
-//            con[j*NX+i] = (u[j*NX+i]- sin(M_PI*j*H)*sinh(M_PI*i*H)* sin(M_PI*j*H)*sinh(M_PI*i*H))/
-//            abs((u_alt[j*NX+i]-( sin(M_PI*j*H)*sinh(M_PI*i*H)* sin(M_PI*j*H)*sinh(M_PI*i*H))));
-//            convergence += con[j*NX+i];
+            //            con[j*NX+i] = (u[j*NX+i]- sin(M_PI*j*H)*sinh(M_PI*i*H)* sin(M_PI*j*H)*sinh(M_PI*i*H))/
+            //            abs((u_alt[j*NX+i]-( sin(M_PI*j*H)*sinh(M_PI*i*H)* sin(M_PI*j*H)*sinh(M_PI*i*H))));
+            //            convergence += con[j*NX+i];
             con[j*NX+i] = (u[j*NX+i])/(u_alt[j*NX+i]);
-//            convergence += con[j*NX+i];
- 
+            //            convergence += con[j*NX+i];
+
         }
     }
     convergence = calcL2Norm(con, NX,NY);

@@ -44,18 +44,7 @@ int main(int argc, char *argv[]) {
     double convergence = 0;
     double convergence_old = 1;
 
-    /* residuum(res,f, u, NX,NY);
-
-       double l2norm = calcL2Norm(res, NX, NY);
-       cout<<l2norm<<endl;
-       save_in_file("residuum_gs100_neue_l2.txt", res, NX, NY);
-
-       memset(res,0,sizeof(double)*NY*NX);
-       calculate_L2Norm(res, u, f, NX, NY);
-       save_in_file("residuum_gs100_alte_l2.txt", res, NX, NY);
-       delete[] res;
-
-     */
+    
 
     // time measurements
     struct timeval start, end;
@@ -63,6 +52,9 @@ int main(int argc, char *argv[]) {
     gettimeofday(&start, NULL); 
     for(int i=0;i<n;i++){ //multigrid steps
         mgm(u,f,2,1,NX, NY);
+        
+        
+        
         residuum(res,f,u,NX,NY);
         // norm and convergence
         l2norm = calcL2Norm(res, NX,NY);
@@ -241,6 +233,13 @@ void initCoarseBD(const double* u_fi, double* u_co, int Nx_co){
         u_co[j*Nx_co+Nx_co-1] = u_fi[j*2*n_x+n_x-1];
     }
 }
+// sets NeumanBoundaries at the left and right boundary
+void setNMBoundary(double* u,double bdValue,double h, int n_x, int n_y,){
+		for(int j=1; j<n_y-1;j++){
+			u[j*n_x+0] = u[j*n_x+1]+h*bdValue;
+			u[j*n_x+n_x-1] = u[j*n_x+n_x-2]+h*bdValue;
+    }
+}
 
 
 //recursive multigrid function
@@ -257,8 +256,8 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
     int Ny_co=(n_y/2)+1;
     double* f_co=new double[Ny_co*Nx_co]; // coarse f
     restriction(f_co,res, n_x, n_y); //full weighted restriction
-
-    delete[] res;
+	delete[] res;
+    
     double* c_co=new double[Ny_co*Nx_co]; // coarse f
     memset(c_co,0, sizeof(double)*Ny_co*Nx_co);
 
@@ -286,19 +285,14 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
     }
     prolongation(c_co,u,n_x,n_y); //prolongation
     delete[] c_co;
+    if(n_x==NX+1){
+		setNMBoundary(u,-1,h,n_x,n_y,)
+	}
+     
     do_gauss_seidel(u,f,n_x,n_y,v2); //post-smoothing*/
 
 
-    /*double* error = new double[n_x*n_y];    // ERROR MEASUREMENT
-    //TODO the last error file always looks wrong (only half of it correct)
-    if(((n_x-1)%8 == 0) && n_x-1 <= 256){
-    measureError(u, n_x, n_y, error);
-    char filename[13];
-    sprintf(filename, "error%u.txt", n_x-1);
-    save_in_file(filename, error , n_x, n_y);
-    }
-    delete[] error;
-     */
+   
 }
 
 //calculates residuum

@@ -33,20 +33,17 @@ static int NX; // grid points in x-direction
 static int NY; // grid points in y-direction
 
 
-int getGridPointsDirichlet();
-int getGridPointsNeumann();
 void initializeGrid(double* u);
 void initialize_u_with_boundary_conditions(double *u, const int n_x, const int n_y, const double h_x, const double h_y);
 void initCoarseBD(const double* u_fi, double* u_co, int Nx_co);
 void save_in_file(const char *str, double *matrix, const int n_x, const int n_y);
 
 void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const int c);
+void initBD(double* u,const int n_x, const int n_y);
 void residuum(double* res,double* f, double* u, const int n_x,const int n_y);
 void restriction(double* f_co,double* res,const int n_x,const int n_y);
 void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y);
 void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y);
-void calcResiduum(double *res, double *f, double *u, int n_x, int n_y);
-double calculate_L2Norm(double *res, const double *u, const double *f, const int n_x, const int n_y);
 double calcL2Norm(double *res, int n_x, int n_y);
-double calculateConvergence(double* u, double* u_alt, double* con);
 void measureError(double* u, double * error);
+void setNMBoundary(double* u,double bdValue,const int n_y,const int n_x);

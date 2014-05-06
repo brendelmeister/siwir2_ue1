@@ -27,9 +27,9 @@ int main(int argc, char *argv[]) {
     double* u = new double[NX*NY]; // initialise arrays
     memset(u,0,sizeof(double)*NY*NX);
 
-    initializeGrid(u);
+    //initializeGrid(u);
     //if neumann
-    //initBD(u,NX,NY);
+    initBD(u,NX,NY);
 
     double* f = new double[NX*NY];
     //memset(f,0,sizeof(double)*NY*NX);
@@ -113,21 +113,101 @@ void save_in_file(const char *str, double *matrix, const int n_x, const int n_y)
 /*prolongation von grob/coarse nach fein/fine*/
 void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y){
 
-    // LH: Try the Interpolation/Prolongation algorithm from Pflaum-Script p. 6
-    int Nx_co=(n_x/2)+1;
-    int Ny_co=(n_y/2)+1;
+   int Nx_co=(n_x/2)+1;
+   int Ny_co=(n_y/2)+1;
 
-    for(int j = 0; j < Ny_co-1; ++j)
-    {
-        for(int i = 0; i < Nx_co-1; ++i)
-        {
-	    if (i!=0 && j!=0)
-	       u_fi[IDX(2*i,2*j)]	   	+= u_co[j * Nx_co+ i]; // centre 
-	    u_fi[IDX(2*i+1,2*j)]	+= 1./2. * (u_co[j * Nx_co+ i] + u_co[j * Nx_co+ i+1]);
-            u_fi[IDX(2*i,2*j+1)]    	+= 1./2. * (u_co[j * Nx_co+ i] + u_co[(j+1) * Nx_co+i]);
-            u_fi[IDX(2*i+1,2*j+1)] 	+= 1./4. * (u_co[j * Nx_co+ i] + u_co[(j+1) * Nx_co+i]+ u_co[j * Nx_co+ i+1]+ u_co[(j+1) * Nx_co+ i+1]);
-        } 
-    }
+   /*
+      for(int j = 0; j < Ny_co-1; ++j)
+      {
+      for(int i = 0; i < Nx_co-1; ++i)
+      {
+      if (i!=0 && j!=0)
+      u_fi[IDX(2*i,2*j)]  	+= u_co[j * Nx_co+ i]; // centre 
+      u_fi[IDX(2*i+1,2*j)]	+= 1./2. * (u_co[j * Nx_co+ i] + u_co[j * Nx_co+ i+1]);
+      u_fi[IDX(2*i,2*j+1)]    	+= 1./2. * (u_co[j * Nx_co+ i] + u_co[(j+1) * Nx_co+i]);
+      u_fi[IDX(2*i+1,2*j+1)] 	+= 1./4. * (u_co[j * Nx_co+ i] + u_co[(j+1) * Nx_co+i]+ u_co[j * Nx_co+ i+1]+ u_co[(j+1) * Nx_co+ i+1]);
+      } 
+      }
+      */
+
+   //set four courners
+   int i=0;
+   int j=0;
+   double center = u_co[j * Nx_co+ i];
+   u_fi[IDX(2*i+1,2*j+1)] 	+= 1./4. * center;
+
+   i=Nx_co-1;
+
+   center = u_co[j * Nx_co+ i];
+   u_fi[IDX(2*i-1,2*j+1)] 	+= 1./4. * center;
+
+   j=Ny_co-1;
+   center = u_co[j * Nx_co+ i];
+   u_fi[IDX(2*i-1,2*j-1)] 	+= 1./4. * center;
+
+   i=0;
+   center = u_co[j * Nx_co+ i];
+   u_fi[IDX(2*i+1,2*j-1)] 	+= 1./4. * center;
+
+   //y-border-columns
+   for(j = 1; j < Ny_co-1; ++j)
+   {
+      i=0;
+      center = u_co[j * Nx_co+ i];
+
+      u_fi[IDX(2*i+1,2*j)]	+= 1./2. * center;
+      u_fi[IDX(2*i+1,2*j-1)] 	+= 1./4. * center;
+      u_fi[IDX(2*i+1,2*j+1)] 	+= 1./4. * center;
+
+      i=Nx_co-1;
+
+      center = u_co[j * Nx_co+ i];
+
+      u_fi[IDX(2*i-1,2*j)]	+= 1./2. * center;
+      u_fi[IDX(2*i-1,2*j+1)] 	+= 1./4. * center;
+      u_fi[IDX(2*i-1,2*j-1)] 	+= 1./4. * center;
+   }
+
+   //x-border-rows
+   for(i = 1; i < Nx_co-1; ++i)
+   {
+      j=0;
+      center = u_co[j * Nx_co+ i];
+
+
+      u_fi[IDX(2*i,2*j+1)]    	+= 1./2. * center;
+      u_fi[IDX(2*i-1,2*j+1)] 	+= 1./4. * center;
+      u_fi[IDX(2*i+1,2*j+1)] 	+= 1./4. * center;
+
+      j=Ny_co-1;
+
+      center = u_co[j * Nx_co+ i];
+
+      u_fi[IDX(2*i , 2*j-1)]    	+= 1./2. * center;
+      u_fi[IDX(2*i+1,2*j-1)] 	+= 1./4. * center;
+      u_fi[IDX(2*i-1,2*j-1)] 	+= 1./4. * center;
+   }
+
+   //inner grid
+   for(j = 1; j < Ny_co-1; ++j)
+   {
+      for(i = 1; i < Nx_co-1; ++i)
+      {
+
+	 center = u_co[j * Nx_co+ i];
+	 u_fi[IDX(2*i,2*j)]  	+= center;
+
+	 u_fi[IDX(2*i+1,2*j)]	+= 1./2. * center;
+	 u_fi[IDX(2*i-1,2*j)]	+= 1./2. * center;
+	 u_fi[IDX(2*i,2*j+1)]    	+= 1./2. * center;
+	 u_fi[IDX(2*i,2*j-1)]    	+= 1./2. * center;
+
+	 u_fi[IDX(2*i-1,2*j+1)] 	+= 1./4. * center;
+	 u_fi[IDX(2*i+1,2*j-1)] 	+= 1./4. * center;
+	 u_fi[IDX(2*i-1,2*j-1)] 	+= 1./4. * center;
+	 u_fi[IDX(2*i+1,2*j+1)] 	+= 1./4. * center;
+      } 
+   }
 }
 
 
@@ -227,6 +307,7 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
     if (n_y == NY)
        setNMBoundary(u,-1.,n_y,n_x);
        */
+
     do_gauss_seidel(u,f,n_x,n_y,v1,-1.0);//Pre-smoothing
 
     double* res = new double[n_y*n_x];
@@ -264,8 +345,17 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
         delete[] f_co;
     }
 
+    /*
+    if (n_y == NY)
+       setNMBoundary(u,-1.,n_y,n_x);
+       */
     prolongation(c_co,u,n_x,n_y); //prolongation
     delete[] c_co;
+
+    /*
+    if (n_y == NY)
+       setNMBoundary(u,-1.,n_y,n_x);
+       */
      
     do_gauss_seidel(u,f,n_x,n_y,v2,-1.0);//post-smoothing
 }
@@ -275,7 +365,6 @@ void residuum(double* res,double* f, double* u, const int n_x,const int n_y){
     double hx_local = 1.0/(n_x);	
     double hy_local = 1.0/(n_y);
 
-   //setNMBoundary(u,-1.,n_y,n_x);
 
     for(int j=1;j<n_y-1;j++){
         for(int i=1;i<n_x-1;i++){

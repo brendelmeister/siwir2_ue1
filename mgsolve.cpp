@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     l = atoi(argv[1]);
     n = atoi(argv[2]);
     NX = NY = pow(2,l)+1;
-    H = 1.0/(NX);
+    H = 1.0/(NX-1);
 
 
     double* u = new double[NX*NY]; // initialise arrays
@@ -34,13 +34,13 @@ int main(int argc, char *argv[]) {
     double* f = new double[NX*NY];
     //memset(f,0,sizeof(double)*NY*NX);
     for (int i=0;i<NX*NY;i++)
-   	f[i]=0.0;
+        f[i]=2.0;
 
     double* con = new double[NX*NY];
     memset(con,0,sizeof(double)*NY*NX);
 
-    double* res = new double[NY*NX];
-    memset(res,0,sizeof(double)*NY*NX);
+    double* resid = new double[NY*NX];
+    memset(resid,0,sizeof(double)*NY*NX);
 
     double l2norm = 0;
     double l2_old = 1.0;
@@ -53,10 +53,10 @@ int main(int argc, char *argv[]) {
     for(int i=0;i<n;i++){ 
 	//multigrid steps
         mgm(u,f,2,1,NX, NY);
-        
-        residuum(res,f,u,NX,NY);
+
+        residuum(resid,f,u,NX,NY);
         // norm and convergence
-        l2norm = calcL2Norm(res, NX,NY);
+        l2norm = calcL2Norm(resid, NX,NY);
         cout<<"L2 Norm: "<<l2norm<<endl;
 
         cout<<"Convergence rate: "<< l2norm / l2_old <<endl;
@@ -227,16 +227,16 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
       {
 	 for (int x=(y%2)+1;x<n_x-1;x+=2)
 	 {
-	    u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
+        u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
 	 }
       }
       //black
       for (int y=1;y<n_y-1;y++)
       {
-	 for (int x=((y+1)%2)+1;x<n_x-1;x+=2)
-	 {
-	    u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
-	 }
+        for (int x=((y+1)%2)+1;x<n_x-1;x+=2)
+        {
+            u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
+        }
       }
    }
 }
@@ -303,20 +303,20 @@ void setNMBoundary(double* u,double bdValue,const int n_y,const int n_x){
 //recursive multigrid function
 void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
 
-    /*
-    if (n_y == NY)
-       setNMBoundary(u,-1.,n_y,n_x);
-       */
+
+    //if (n_y == NY)
+       //setNMBoundary(u,-1.,n_y,n_x);
+
 
     do_gauss_seidel(u,f,n_x,n_y,v1,-1.0);//Pre-smoothing
 
     double* res = new double[n_y*n_x];
     memset(res,0,sizeof(double)*n_y*n_x);
 
-    /*
-    if (n_y == NY)
-       setNMBoundary(u,-1.,n_y,n_x);
-       */
+
+    //if (n_y == NY)
+      // setNMBoundary(u,-1.,n_y,n_x);
+
     residuum(res, f, u, n_x, n_y); //residuum calculation
 
     int Nx_co=(n_x/2)+1; //calculating coarse grid size
@@ -345,25 +345,23 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
         delete[] f_co;
     }
 
-    /*
-    if (n_y == NY)
-       setNMBoundary(u,-1.,n_y,n_x);
-       */
+
+
     prolongation(c_co,u,n_x,n_y); //prolongation
     delete[] c_co;
 
-    /*
-    if (n_y == NY)
-       setNMBoundary(u,-1.,n_y,n_x);
-       */
+
+
+
      
     do_gauss_seidel(u,f,n_x,n_y,v2,-1.0);//post-smoothing
+
 }
 
 //calculates residuum
 void residuum(double* res,double* f, double* u, const int n_x,const int n_y){
-    double hx_local = 1.0/(n_x);	
-    double hy_local = 1.0/(n_y);
+    double hx_local = 1.0/(n_x-1);
+    double hy_local = 1.0/(n_y-1);
 
 
     for(int j=1;j<n_y-1;j++){

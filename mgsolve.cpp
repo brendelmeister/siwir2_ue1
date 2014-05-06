@@ -54,9 +54,9 @@ int main(int argc, char *argv[]) {
         residuum(res,f,u,NX,NY);
         // norm and convergence
         l2norm = calcL2Norm(res, NX,NY);
-        //cout<<"L2 Norm: "<<l2norm<<endl;
+        cout<<"L2 Norm: "<<l2norm<<endl;
 
-        //cout<<"Convergence rate: "<< l2norm / l2_old <<endl;
+        cout<<"Convergence rate: "<< l2norm / l2_old <<endl;
         l2_old = l2norm;
 
     }
@@ -290,7 +290,7 @@ void restriction(double* f_co,double* res,const int n_x,const int n_y){
 
 // sets NeumanBoundaries at the left and right boundary
 void setNMBoundary(double* u,double bdValue,const int n_y,const int n_x){
-   double hy = 1./double(n_y);
+   double hy = 1./double(n_y-1);
    for (int y=1;y<n_y-1;y++)
    {
       u[IDX(0,y)] = u[IDX(1,y)]+hy*bdValue;

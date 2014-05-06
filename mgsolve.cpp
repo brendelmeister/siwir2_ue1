@@ -27,14 +27,14 @@ int main(int argc, char *argv[]) {
     double* u = new double[NX*NY]; // initialise arrays
     memset(u,0,sizeof(double)*NY*NX);
 
-    //initializeGrid(u);
+    initializeGrid(u);
     //if neumann
-    initBD(u,NX,NY);
+   // initBD(u,NX,NY);
 
     double* f = new double[NX*NY];
     //memset(f,0,sizeof(double)*NY*NX);
     for (int i=0;i<NX*NY;i++)
-        f[i]=2.0;
+        f[i]=0.0;
 
     double* resid = new double[NY*NX];
     memset(resid,0,sizeof(double)*NY*NX);
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
         l2norm = calcL2Norm(resid, NX,NY);
        // cout<<"L2 Norm: "<<l2norm<<endl;
 
-       // cout<<"Convergence rate: "<< l2norm / l2_old <<endl;
+        //cout<<"Convergence rate: "<< l2norm / l2_old <<endl;
         l2_old = l2norm;
 
     }
@@ -394,6 +394,8 @@ void measureError(double *u, double *error){
     for(int j = 0; j<NY; j++){
         for(int i = 0; i < NX; i++){
             error[j*NX+i] =  u[j*NX+i]-sin(M_PI*i*h)*sinh(M_PI*j*h);
+//            error[j*NX+i] =  u[j*NX+i]-(i*h)*(1-i*h);
+
         }
     }
 }

@@ -36,9 +36,6 @@ int main(int argc, char *argv[]) {
     for (int i=0;i<NX*NY;i++)
    	f[i]=0.0;
 
-    double* con = new double[NX*NY];
-    memset(con,0,sizeof(double)*NY*NX);
-
     double* res = new double[NY*NX];
     memset(res,0,sizeof(double)*NY*NX);
 
@@ -57,9 +54,9 @@ int main(int argc, char *argv[]) {
         residuum(res,f,u,NX,NY);
         // norm and convergence
         l2norm = calcL2Norm(res, NX,NY);
-        cout<<"L2 Norm: "<<l2norm<<endl;
+        //cout<<"L2 Norm: "<<l2norm<<endl;
 
-        cout<<"Convergence rate: "<< l2norm / l2_old <<endl;
+        //cout<<"Convergence rate: "<< l2norm / l2_old <<endl;
         l2_old = l2norm;
 
     }
@@ -81,9 +78,11 @@ int main(int argc, char *argv[]) {
     sprintf(filename, "error%u.txt", NX-1);
     save_in_file(filename, error , NX, NY);
 
+    double errorSum = calcL2Norm(error, NX,NY);
+    cout<<"1/"<<NX-1<<": "<<errorSum<<endl;
+    
     delete[] u;
     delete[] f;
-    delete[] con;
 }
 
 void save_in_file(const char *str, double *matrix, const int n_x, const int n_y){

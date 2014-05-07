@@ -8,7 +8,7 @@ Michael Hildebrand; 21602600; mu23jyhu
 Paket:
 
 mgsolve.cpp: implements Multigrid for partial DGL with Neumann/Dirichlet BC
-    change the BC to compiletime: uncomment the right things in lines 34-46, 270f
+    change the BC to compiletime: uncomment the right things in lines 34-46, 270f, 410-414
 Makefile;
 ex01.pdf: graph with comparison of error of different BCs, interpretation
 header.h;

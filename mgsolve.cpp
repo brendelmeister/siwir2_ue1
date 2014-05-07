@@ -32,18 +32,18 @@ int main(int argc, char *argv[]) {
     memset(u,0,sizeof(double)*NY*NX);
 
     //uncomment below if Dirichlet BC
-    //initializeGrid(u);
+    initializeGrid(u);
     
     //uncomment below if Neumann BC
-    initBD(u,NX,NY);
+    //initBD(u,NX,NY);
 
     double* f = new double[NX*NY];
     //uncomment below if Dirichlet BC
-    //memset(f,0,sizeof(double)*NY*NX);
+    memset(f,0,sizeof(double)*NY*NX);
 
     //uncomment below if Neumann BC
-    for (int i=0;i<NX*NY;i++)
-      f[i] = 2.;
+    //for (int i=0;i<NX*NY;i++)
+    //  f[i] = 2.;
 
     double* res = new double[NY*NX];
     memset(res,0,sizeof(double)*NY*NX);
@@ -268,7 +268,7 @@ void initBD(double* u,const int n_x, const int n_y){
    }
 
    //uncomment if Neumann BCs
-   setNMBoundary(u,-1.,n_y,n_x);
+   //setNMBoundary(u,-1.,n_y,n_x);
 }
 
 
@@ -407,7 +407,11 @@ void measureError(double *u, double *error){
     double h = 1./(NX-1);
     for(int j = 0; j<NY; ++j){
         for(int i = 0; i < NX; ++i){
-            error[j*NX+i] =  u[j*NX+i]-(i*h)*(1-i*h);
+            //uncomment below for Dirichlet BCs
+            error[j*NX+i] =  u[j*NX+i]-sin(M_PI*i*h)*sinh(M_PI*j*h);
+
+            //uncomment below for Neumann BCs
+            //error[j*NX+i] =  u[j*NX+i]-(i*h)*(1-i*h);
         }
     }
 }
